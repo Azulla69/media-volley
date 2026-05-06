@@ -1,0 +1,52 @@
+<nav class="navbar navbar-expand-lg fixed-top" id="mainNav">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{% url 'core:home' %}">
+            <span class="brand-icon">🏐</span>
+            <span class="brand-text">Медиалига</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'leagues:list' %}"><span class="nav-icon">🏆</span> Чемпионаты</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'stats:leaders' %}"><span class="nav-icon">📊</span> Рейтинг</a>
+                </li>
+                
+                {% if user.is_authenticated and user.role != 'PLAYER' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'users:admin_panel' %}"><span class="nav-icon">🔧</span> Админ-панель</a>
+                </li>
+                {% endif %}
+                
+                <li class="nav-item ms-2">
+                    <button class="btn btn-sm btn-outline-light rounded-circle" id="themeToggle" style="width:36px;height:36px;">☀️</button>
+                </li>
+                
+                {% if user.is_authenticated %}
+                <li class="nav-item dropdown ms-2">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <span class="avatar-sm">{{ user.first_name|first }}{{ user.last_name|first }}</span>
+                        {{ user.first_name }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'users:profile' %}">👤 Профиль</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'users:logout' %}">🚪 Выйти</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item ms-2">
+                    <a class="nav-link btn btn-outline-warning btn-sm px-3" href="{% url 'users:register' %}">Регистрация</a>
+                </li>
+                <li class="nav-item ms-1">
+                    <a class="nav-link btn btn-outline-light btn-sm px-3" href="{% url 'users:login' %}">Войти</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

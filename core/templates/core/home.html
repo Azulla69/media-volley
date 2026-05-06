@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Медиалига Волейбола{% endblock %}
+
+{% block content %}
+<!-- ГЕРОЙ -->
+<section class="hero" id="hero">
+    <canvas id="particlesCanvas"></canvas>
+    <div class="container position-relative">
+        <div class="text-center" style="min-height: 85vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <span class="badge bg-warning text-dark mb-3 px-3 py-2 fs-6">🏐 Волейбольная экосистема</span>
+            <h1 class="display-2 fw-bold mb-3 hero-title">Медиалига<br>Волейбола</h1>
+            <p class="lead mb-4 hero-desc mx-auto" style="max-width: 600px;">Все чемпионаты города в одном месте. Статистика, матчи, рейтинги — онлайн.</p>
+            <div class="d-flex gap-3 justify-content-center mb-4">
+                <a href="#" class="btn btn-warning btn-lg fw-bold px-4 py-3">Смотреть матчи</a>
+                <a href="#" class="btn btn-outline-light btn-lg px-4 py-3">Рейтинг игроков</a>
+            </div>
+            
+            <!-- ВОЛЕЙБОЛЬНАЯ СЦЕНА -->
+            <div class="volleyball-scene">
+                <div class="stickman stickman-left">
+                    <div class="head"></div>
+                    <div class="body"></div>
+                    <div class="arm"></div>
+                    <div class="leg leg-left"></div>
+                    <div class="leg leg-right"></div>
+                </div>
+                <div class="game-ball">🏐</div>
+                <div class="stickman stickman-right">
+                    <div class="head"></div>
+                    <div class="body"></div>
+                    <div class="arm"></div>
+                    <div class="leg leg-left"></div>
+                    <div class="leg leg-right"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="hero-wave">
+        <svg viewBox="0 0 1440 120"><path fill="#0f0f1a" d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"/></svg>
+    </div>
+</section>
+
+
+
+<!-- БЛИЖАЙШИЙ МАТЧ -->
+<section class="next-match-section">
+    <div class="container">
+        <div class="next-match reveal">
+            <div class="row align-items-center">
+                <div class="col-md-3 text-center">
+                    <div class="match-timer" id="countdown">
+                        <span class="timer-number">00</span>д
+                        <span class="timer-number">00</span>ч
+                        <span class="timer-number">00</span>м
+                    </div>
+                </div>
+                <div class="col-md-6 text-center">
+                    <div class="match-teams">
+                        <span class="team-name">Зенит</span>
+                        <span class="vs">VS</span>
+                        <span class="team-name">Локомотив</span>
+                    </div>
+                    <div class="match-info">Ночная волейбольная лига • 15 июня 2024 • 19:00</div>
+                </div>
+                <div class="col-md-3 text-center">
+                    <span class="badge bg-danger px-3 py-2">🔥 Следующий матч</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- КАК ЭТО РАБОТАЕТ -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <h2 class="fw-bold">Как это работает</h2>
+            <p class="section-subtitle">Три простых шага к волейболу</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="step-card reveal">
+                    <div class="step-number">1</div>
+                    <div class="step-icon">📝</div>
+                    <h5>Регистрация</h5>
+                    <p>Создайте профиль игрока, укажите данные и получите доступ к статистике</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="step-card reveal">
+                    <div class="step-number">2</div>
+                    <div class="step-icon">🏆</div>
+                    <h5>Выбор чемпионата</h5>
+                    <p>Присоединяйтесь к турнирам или создавайте свои команды</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="step-card reveal">
+                    <div class="step-number">3</div>
+                    <div class="step-icon">📊</div>
+                    <h5>Игра и статистика</h5>
+                    <p>Следите за результатами, рейтингами и личным прогрессом</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ГАЛЕРЕЯ -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <h2 class="fw-bold">Моменты игры</h2>
+            <p class="section-subtitle">Лучшие кадры с наших турниров</p>
+        </div>
+        <div class="gallery-grid reveal">
+            <div class="gallery-item gallery-1"><div class="gallery-overlay">🏐 Атака</div></div>
+            <div class="gallery-item gallery-2"><div class="gallery-overlay">🛡️ Блок</div></div>
+            <div class="gallery-item gallery-3"><div class="gallery-overlay">🏆 Победа</div></div>
+            <div class="gallery-item gallery-4"><div class="gallery-overlay">🤝 Команда</div></div>
+            <div class="gallery-item gallery-5"><div class="gallery-overlay">🔥 Подача</div></div>
+            <div class="gallery-item gallery-6"><div class="gallery-overlay">🎉 Эмоции</div></div>
+        </div>
+    </div>
+</section>
+
+<!-- ЧЕМПИОНАТЫ -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <h2 class="fw-bold">Наши чемпионаты</h2>
+            <p class="section-subtitle">Выберите турнир и следите за игрой</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3 d-flex">
+                <div class="champ-card reveal w-100">
+                    <div class="champ-img champ-1"></div>
+                    <div class="champ-body">
+                        <h5>Ночная волейбольная лига</h5>
+                        <p>Хабаровск</p>
+                        <span class="badge bg-primary">Классика</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 d-flex">
+                <div class="champ-card reveal w-100">
+                    <div class="champ-img champ-2"></div>
+                    <div class="champ-body">
+                        <h5>Рандом волейбол</h5>
+                        <p>Случайные составы</p>
+                        <span class="badge bg-danger">Классика</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 d-flex">
+                <div class="champ-card reveal w-100">
+                    <div class="champ-img champ-3"></div>
+                    <div class="champ-body">
+                        <h5>Кубок Факела</h5>
+                        <p>Ежегодный кубок</p>
+                        <span class="badge bg-warning text-dark">Классика</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 d-flex">
+                <div class="champ-card reveal w-100">
+                    <div class="champ-img champ-4"></div>
+                    <div class="champ-body">
+                        <h5>Кубок Губернатора</h5>
+                        <p>Пляжный волейбол</p>
+                        <span class="badge bg-info">Пляж</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ЛИДЕРЫ НЕДЕЛИ -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <h2 class="fw-bold">🔥 Лидеры недели</h2>
+            <p class="section-subtitle">Топ-3 игрока по набранным очкам</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-4">
+                <div class="leader-card reveal">
+                    <div class="leader-medal">🥇</div>
+                    <div class="leader-avatar">АИ</div>
+                    <h5>Алексей Иванов</h5>
+                    <p>Зенит • 48 очков</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="leader-card reveal">
+                    <div class="leader-medal">🥈</div>
+                    <div class="leader-avatar">СП</div>
+                    <h5>Сергей Петров</h5>
+                    <p>Локомотив • 42 очка</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="leader-card reveal">
+                    <div class="leader-medal">🥉</div>
+                    <div class="leader-avatar">ДС</div>
+                    <h5>Дмитрий Смирнов</h5>
+                    <p>Динамо • 39 очков</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ЦИФРЫ -->
+<section class="stats-section py-5">
+    <div class="container">
+        <div class="row g-4 text-center">
+            <div class="col-6 col-md-3">
+                <div class="stat-card reveal">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-number" data-target="4">0</div>
+                    <div class="stat-label">Чемпионата</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card reveal">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-number" data-target="16">0</div>
+                    <div class="stat-label">Команд</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card reveal">
+                    <div class="stat-icon">🏃</div>
+                    <div class="stat-number" data-target="100">0</div>
+                    <div class="stat-label">Игроков</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card reveal">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-number" data-target="50">0</div>
+                    <div class="stat-label">Матчей</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- СОЦСЕТИ -->
+<section class="py-5">
+    <div class="container text-center reveal">
+        <h2 class="fw-bold mb-4">Мы в соцсетях</h2>
+        <p class="section-subtitle mb-4">Подписывайтесь, чтобы быть в курсе всех событий</p>
+        <div class="d-flex justify-content-center flex-wrap gap-3">
+            <a href="#" class="social-btn telegram">Telegram</a>
+            <a href="#" class="social-btn vk">ВКонтакте</a>
+            <a href="#" class="social-btn max">Макс</a>
+        </div>
+    </div>
+</section>
+
+<!-- КНОПКА НАВЕРХ -->
+<button class="scroll-top" id="scrollTop">↑</button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Частицы
+const canvas = document.getElementById('particlesCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+const particles = [];
+for (let i = 0; i < 30; i++) {
+    particles.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: Math.random()*4+2, speedX: (Math.random()-0.5)*0.5, speedY: (Math.random()-0.5)*0.5 });
+}
+function animateParticles() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill();
+        p.x+=p.speedX; p.y+=p.speedY;
+        if(p.x<0||p.x>canvas.width)p.speedX*=-1;
+        if(p.y<0||p.y>canvas.height)p.speedY*=-1;
+    });
+    requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// Параллакс
+window.addEventListener('scroll', () => {
+    const hero = document.getElementById('hero');
+    const scrolled = window.pageYOffset;
+    hero.style.backgroundPositionY = scrolled * 0.5 + 'px';
+});
+
+// Обратный отсчёт
+const matchDate = new Date('2024-06-15T19:00:00');
+function updateCountdown() {
+    const now = new Date(), diff = matchDate - now;
+    if (diff <= 0) return;
+    document.getElementById('countdown').innerHTML = 
+        `<span class="timer-number">${Math.floor(diff/(1000*60*60*24))}</span>д <span class="timer-number">${Math.floor((diff%(1000*60*60*24))/(1000*60*60))}</span>ч <span class="timer-number">${Math.floor((diff%(1000*60*60))/(1000*60))}</span>м`;
+}
+updateCountdown(); setInterval(updateCountdown, 60000);
+
+// Плавное появление
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+reveals.forEach(r => observer.observe(r));
+
+// Анимированные цифры
+const statNumbers = document.querySelectorAll('.stat-number[data-target]');
+const statObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            const el = e.target, target = +el.dataset.target;
+            let current = 0;
+            const step = target / 50;
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= target) { el.textContent = target + (target > 50 ? '+' : ''); clearInterval(timer); }
+                else el.textContent = Math.floor(current);
+            }, 30);
+            statObserver.unobserve(el);
+        }
+    });
+}, { threshold: 0.5 });
+statNumbers.forEach(n => statObserver.observe(n));
+
+// Кнопка наверх
+const scrollTopBtn = document.getElementById('scrollTop');
+window.addEventListener('scroll', () => {
+    scrollTopBtn.style.display = window.pageYOffset > 500 ? 'block' : 'none';
+});
+scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+</script>
+{% endblock %}

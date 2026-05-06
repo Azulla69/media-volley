@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}{{ player.full_name }} - Статистика{% endblock %}
+
+{% block content %}
+<h2>{{ player.full_name }}</h2>
+
+<h3>Классический волейбол</h3>
+<p>ОЗ: {{ classic_stats.OZ|default:0 }} | ОБ: {{ classic_stats.OB|default:0 }} | ОП: {{ classic_stats.OP|default:0 }}</p>
+
+<h3>Пляжный волейбол</h3>
+<p>ОЗ: {{ beach_stats.OZ|default:0 }} | ОБ: {{ beach_stats.OB|default:0 }} | ОП: {{ beach_stats.OP|default:0 }}</p>
+{% endblock %}

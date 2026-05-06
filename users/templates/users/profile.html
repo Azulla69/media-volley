@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Профиль - {{ player.first_name }} {{ player.last_name }}{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <div class="container">
+        <div class="row">
+            <!-- ЛЕВАЯ КОЛОНКА -->
+            <div class="col-lg-4 mb-4">
+                <div class="profile-card">
+                    <div class="profile-avatar-wrapper">
+                        {% if player.avatar %}
+                            <img src="{{ player.avatar.url }}" class="profile-avatar" alt="{{ player.first_name }} {{ player.last_name }}">
+                        {% else %}
+                            <div class="profile-avatar-placeholder">
+                                {{ player.first_name|first }}{{ player.last_name|first }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h3 class="profile-name">{{ player.first_name }} {{ player.last_name }}</h3>
+                    
+                    {% if player.bio %}
+                        <p class="profile-bio">{{ player.bio }}</p>
+                    {% else %}
+                        <p class="profile-bio section-subtitle">Пока ничего не рассказал о себе...</p>
+                    {% endif %}
+                    
+                    {% if hot_streak > 0 %}
+                    <div class="hot-streak">
+                        <span class="hot-streak-icon">🔥</span>
+                        <span class="hot-streak-text">Победная серия: <strong>{{ hot_streak }}</strong> матчей!</span>
+                    </div>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-secondary btn-sm mt-2" onclick="shareProfile()">🔗 Поделиться</button>
+                    
+                    {% if is_owner %}
+                        <a href="{% url 'users:profile_edit' %}" class="btn btn-outline-primary btn-sm mt-2">✏️ Редактировать</a>
+                    {% endif %}
+                    
+                    <!-- КАЛЕНДАРЬ -->
+                    <div class="match-calendar mt-3">
+                        <h5 class="calendar-title">📅 {{ today|date:"F Y" }}</h5>
+                        <table class="calendar-table">
+                            <thead><tr><th>Пн</th><th>Вт</th><th>Ср</th><th>Чт</th><th>Пт</th><th>Сб</th><th>Вс</th></tr></thead>
+                            <tbody>
+                                {% for week in calendar_data %}
+                                    <tr>
+                                        {% for d in week %}
+                                            <td class="{% if d.has_match %}has-match{% endif %}">{{ d.day }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="calendar-legend"><span class="legend-dot"></span> — матч</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ПРАВАЯ КОЛОНКА -->
+            <div class="col-lg-8">
+                <!-- ВКЛАДКИ -->
+                <div class="stat-tabs">
+                    <button class="stat-tab active" onclick="switchStats('total')">Общая</button>
+                    <button class="stat-tab" onclick="switchStats('classic')">🏐 Классика</button>
+                    <button class="stat-tab" onclick="switchStats('beach')">🏖 Пляж</button>
+                    <button class="stat-tab" onclick="switchStats('park')">🌳 Парк</button>
+                </div>
+                
+                {% for stype, stats, matches in stats_list %}
+                <div class="stat-panel {% if stype == 'total' %}active{% endif %}" id="stats-{{ stype }}">
+                    <div class="text-center mb-4">
+                        <div class="total-matches">{{ matches }}</div>
+                        <div class="section-subtitle">Всего матчей</div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- ВКЛАДКИ РУКАМИ (шаблон не поддерживает динамические переменные) -->
+                <div class="stat-panel active" id="stats-total">
+                    <div class="text-center mb-4"><div class="total-matches">{{ total_matches }}</div><div class="section-subtitle">Всего матчей</div></div>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ total_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ total_stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ total_stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ total_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
+                    </div>
+                </div>
+                <div class="stat-panel" id="stats-classic">
+                    <div class="text-center mb-4"><div class="total-matches">{{ classic_matches }}</div><div class="section-subtitle">Матчей в классике</div></div>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ classic_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ classic_stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ classic_stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ classic_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
+                    </div>
+                </div>
+                <div class="stat-panel" id="stats-beach">
+                    <div class="text-center mb-4"><div class="total-matches">{{ beach_matches }}</div><div class="section-subtitle">Матчей в пляжке</div></div>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ beach_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ beach_stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ beach_stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ beach_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
+                    </div>
+                </div>
+                <div class="stat-panel" id="stats-park">
+                    <div class="text-center mb-4"><div class="total-matches">{{ park_matches }}</div><div class="section-subtitle">Матчей в парковом</div></div>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ park_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ park_stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ park_stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ park_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
+                    </div>
+                </div>
+                
+                <!-- ЧЕМПИОНАТЫ -->
+                <div class="championships-section mt-4">
+                    <h4 class="section-heading">🏆 Чемпионаты</h4>
+                    {% if current_championships %}
+                        <h6 class="section-subtitle mb-2">✅ Участвует сейчас</h6>
+                        <div class="row g-2 mb-3">
+                            {% for tp in current_championships %}
+                                <div class="col-md-6"><div class="champ-badge" style="border-left:4px solid {{ tp.team.championship.primary_color }}"><strong>{{ tp.team.championship.name }}</strong><br><small>{{ tp.team.name }} • #{{ tp.jersey_number }} • {{ tp.get_position_display }}</small></div></div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if past_championships %}
+                        <h6 class="section-subtitle mb-2">📅 Участвовал ранее</h6>
+                        <div class="row g-2">
+                            {% for tp in past_championships %}
+                                <div class="col-md-6"><div class="champ-badge past" style="border-left:4px solid #888"><strong>{{ tp.team.championship.name }}</strong><br><small>{{ tp.team.name }} • {{ tp.get_position_display }}</small></div></div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if not current_championships and not past_championships %}
+                        <p class="section-subtitle">Пока не участвует ни в одном чемпионате</p>
+                    {% endif %}
+                </div>
+                
+                <!-- НАГРАДЫ -->
+                {% if awards %}
+                <div class="awards-section mt-4">
+                    <h4 class="section-heading">🎖 Награды</h4>
+                    <div class="awards-grid">
+                        {% for award in awards %}
+                            <div class="award-card {{ award.color }}">
+                                <div class="award-icon">{{ award.icon }}</div>
+                                <div class="award-info">
+                                    <div class="award-name">{{ award.name }}</div>
+                                    <div class="award-detail">{{ award.detail }}</div>
+                                    <div class="award-footer">
+                                        <span class="award-champ">{{ award.championship }}</span>
+                                        {% if award.year %}<span class="award-year">{{ award.year }}</span>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- ПОСЛЕДНИЕ МАТЧИ -->
+                <div class="matches-section mt-4">
+                    <h4 class="section-heading">📋 Последние матчи</h4>
+                    {% if recent_matches %}
+                        <div class="recent-matches-list">
+                            {% for stat in recent_matches %}
+                                <div class="match-row">
+                                    <div class="match-date">{{ stat.match.date_time|date:"d.m.Y" }}</div>
+                                    <div class="match-teams-small">
+                                        <span class="team-a">{{ stat.match.team_home.name }}</span>
+                                        <span class="match-score">
+                                            {% if stat.match.score_home is not None %}
+                                                {{ stat.match.score_home }}:{{ stat.match.score_away }}
+                                            {% else %}
+                                                vs
+                                            {% endif %}
+                                        </span>
+                                        <span class="team-b">{{ stat.match.team_away.name }}</span>
+                                    </div>
+                                    <div class="match-player-stats">
+                                        <span class="stat-badge attack" title="Атака">{{ stat.points_attack }}</span>
+                                        <span class="stat-badge block" title="Блок">{{ stat.points_block }}</span>
+                                        <span class="stat-badge serve" title="Подача">{{ stat.points_serve }}</span>
+                                        <span class="stat-badge total" title="Всего">{{ stat.total_points }}</span>
+                                    </div>
+                                    <div class="match-champ-name">{{ stat.match.championship.short_name }}</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="section-subtitle">Пока не сыграно ни одного матча</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchStats(type){document.querySelectorAll('.stat-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.stat-panel').forEach(p=>p.classList.remove('active'));document.getElementById('stats-'+type).classList.add('active');event.target.classList.add('active');document.querySelectorAll('#stats-'+type+' .count-up').forEach(el=>{animateNumber(el)})}
+function animateNumber(el){const target=+el.dataset.target;let current=0;const step=target/40;const timer=setInterval(()=>{current+=step;if(current>=target){el.textContent=target;clearInterval(timer)}else{el.textContent=Math.floor(current)}},25)}
+document.querySelectorAll('#stats-total .count-up').forEach(el=>animateNumber(el));
+function shareProfile(){navigator.clipboard.writeText(window.location.href).then(()=>{alert('Ссылка скопирована!')})}
+</script>
+{% endblock %}

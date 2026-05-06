@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}{{ championship.name }}{% endblock %}
+
+{% block content %}
+<h2>{{ championship.name }}</h2>
+<p>{{ championship.description }}</p>
+
+{% if photos %}
+<h3>Фотографии</h3>
+<div class="row">
+    {% for photo in photos %}
+        <div class="col-md-3 mb-3">
+            <img src="{{ photo.image.url }}" class="img-fluid" alt="{{ photo.caption }}">
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<h3>Социальные сети</h3>
+{% if championship.telegram_link %}<a href="{{ championship.telegram_link }}" class="btn btn-info">Telegram</a>{% endif %}
+{% if championship.vk_link %}<a href="{{ championship.vk_link }}" class="btn btn-primary">ВКонтакте</a>{% endif %}
+
+<h3>Команды</h3>
+<ul>
+    {% for team in teams %}
+        <li>{{ team.name }} (Капитан: {{ team.captain|default:'не назначен' }})</li>
+    {% endfor %}
+</ul>
+{% endblock %}

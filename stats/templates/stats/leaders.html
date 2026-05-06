@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block title %}Рейтинг игроков - Медиалига Волейбола{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <h2 class="mb-4">📊 Рейтинг игроков</h2>
+    
+    <!-- ФИЛЬТРЫ -->
+    <form class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Сортировать по</label>
+            <select name="sort" class="form-select" onchange="this.form.submit()">
+                <option value="total_points" {% if current_sort == 'total_points' %}selected{% endif %}>Всего очков (О)</option>
+                <option value="total_attack" {% if current_sort == 'total_attack' %}selected{% endif %}>Очки атакой (ОЗ)</option>
+                <option value="total_block" {% if current_sort == 'total_block' %}selected{% endif %}>Очки блоком (ОБ)</option>
+                <option value="total_serve" {% if current_sort == 'total_serve' %}selected{% endif %}>Очки подачей (ОП)</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Пол</label>
+            <select name="gender" class="form-select" onchange="this.form.submit()">
+                <option value="all" {% if current_gender == 'all' %}selected{% endif %}>Все</option>
+                <option value="M" {% if current_gender == 'M' %}selected{% endif %}>Мужчины</option>
+                <option value="F" {% if current_gender == 'F' %}selected{% endif %}>Женщины</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Тип волейбола</label>
+            <select name="type" class="form-select" onchange="this.form.submit()">
+                <option value="all" {% if current_type == 'all' %}selected{% endif %}>Все</option>
+                <option value="CLASSIC" {% if current_type == 'CLASSIC' %}selected{% endif %}>Классический</option>
+                <option value="BEACH" {% if current_type == 'BEACH' %}selected{% endif %}>Пляжный</option>
+            </select>
+        </div>
+    </form>
+    
+    <!-- ТАБЛИЦА -->
+    <div class="rating-table">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">#</th>
+                    <th>Игрок</th>
+                    {% if current_sort == 'total_attack' %}
+                        <th>ОЗ</th><th>О</th><th>ОБ</th><th>ОП</th>
+                    {% elif current_sort == 'total_block' %}
+                        <th>ОБ</th><th>О</th><th>ОЗ</th><th>ОП</th>
+                    {% elif current_sort == 'total_serve' %}
+                        <th>ОП</th><th>О</th><th>ОЗ</th><th>ОБ</th>
+                    {% else %}
+                        <th>О</th><th>ОЗ</th><th>ОБ</th><th>ОП</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in players %}
+                <tr>
+                    <td>
+                        {% if forloop.counter == 1 %}🥇
+                        {% elif forloop.counter == 2 %}🥈
+                        {% elif forloop.counter == 3 %}🥉
+                        {% else %}{{ forloop.counter }}{% endif %}
+                    </td>
+                    <td>
+                        <div class="player-cell">
+                            {% if player.avatar %}
+                                <img src="{{ player.avatar.url }}" class="player-avatar" alt="{{ player.full_name }}">
+                            {% else %}
+                                <div class="player-avatar bg-secondary d-flex align-items-center justify-content-center text-white fw-bold">
+                                    {{ player.first_name|first }}{{ player.last_name|first }}
+                                </div>
+                            {% endif %}
+                            <div>
+                                <a href="{% url 'stats:player_stats' player.id %}" class="player-name">
+                                    {{ player.full_name }}
+                                </a>
+                                <br>
+                                <small class="text-muted">
+                                    {% if player.gender == 'M' %}♂ Мужской{% else %}♀ Женский{% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </td>
+                    {% if current_sort == 'total_attack' %}
+                        <td><strong>{{ player.total_attack|default:0 }}</strong></td>
+                        <td>{{ player.total_points|default:0 }}</td>
+                        <td>{{ player.total_block|default:0 }}</td>
+                        <td>{{ player.total_serve|default:0 }}</td>
+                    {% elif current_sort == 'total_block' %}
+                        <td><strong>{{ player.total_block|default:0 }}</strong></td>
+                        <td>{{ player.total_points|default:0 }}</td>
+                        <td>{{ player.total_attack|default:0 }}</td>
+                        <td>{{ player.total_serve|default:0 }}</td>
+                    {% elif current_sort == 'total_serve' %}
+                        <td><strong>{{ player.total_serve|default:0 }}</strong></td>
+                        <td>{{ player.total_points|default:0 }}</td>
+                        <td>{{ player.total_attack|default:0 }}</td>
+                        <td>{{ player.total_block|default:0 }}</td>
+                    {% else %}
+                        <td><strong>{{ player.total_points|default:0 }}</strong></td>
+                        <td>{{ player.total_attack|default:0 }}</td>
+                        <td>{{ player.total_block|default:0 }}</td>
+                        <td>{{ player.total_serve|default:0 }}</td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5">
+                        <h5>😴 Статистика пока отсутствует</h5>
+                        <p class="text-muted">Добавьте матчи через админ-панель</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

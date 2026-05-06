@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% block title %}Админ-панель{% endblock %}
+
+{% block content %}
+<div class="admin-panel-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🔧 Админ-панель</h2>
+        <span class="badge bg-warning text-dark px-3 py-2">{{ user.get_role_display }}</span>
+    </div>
+    
+    <!-- ДАШБОРД -->
+    <div class="row g-3 mb-4">
+        {% if user.role == 'ADMIN' %}
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ total_users }}</div><div>Пользователей</div></div></div>
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ total_reports }}</div><div>Жалоб</div></div></div>
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ championships|length }}</div><div>Чемпионатов</div></div></div>
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ matches|length }}</div><div>Матчей</div></div></div>
+        {% endif %}
+    </div>
+    
+    <!-- АДМИН: ПОЛЬЗОВАТЕЛИ -->
+    {% if user.role == 'ADMIN' %}
+    <div class="panel-section">
+        <h4>👥 Пользователи</h4>
+        <div class="table-responsive">
+            <table class="table admin-table">
+                <thead><tr><th>Пользователь</th><th>Роль</th><th>Почта</th><th>Телефон</th><th>Активен</th><th>Действия</th></tr></thead>
+                <tbody>
+                    {% for u in all_users %}
+                    <tr>
+                        <td>{{ u.full_name }}</td>
+                        <td>
+                            <form method="post" action="{% url 'users:change_role' u.id %}" class="d-flex gap-1">
+                                {% csrf_token %}
+                                <select name="role" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    {% for val, label in u.Role.choices %}
+                                        <option value="{{ val }}" {% if u.role == val %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.phone }}</td>
+                        <td>{% if u.is_active %}✅{% else %}❌{% endif %}</td>
+                        <td>
+                            <a href="{% url 'users:toggle_active' u.id %}" class="btn btn-sm btn-outline-warning">{% if u.is_active %}Заблокировать{% else %}Разблокировать{% endif %}</a>
+                            {% if u.avatar %}
+                                <a href="{% url 'users:remove_avatar' u.id %}" class="btn btn-sm btn-outline-danger">Удалить аватар</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- АДМИН: НАЗНАЧЕНИЕ МОДЕРАТОРА -->
+    <div class="panel-section mt-4">
+        <h4>🛡️ Назначить модератора</h4>
+        <form method="post" action="{% url 'users:assign_moderator' %}" class="row g-2">
+            {% csrf_token %}
+            <div class="col-md-3">
+                <select name="user_id" class="form-select">
+                    {% for u in all_users %}<option value="{{ u.id }}">{{ u.full_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="champ_id" class="form-select">
+                    {% for c in championships %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2"><label class="form-check"><input type="checkbox" name="can_teams" checked> Команды</label></div>
+            <div class="col-md-2"><label class="form-check"><input type="checkbox" name="can_matches" checked> Матчи</label></div>
+            <div class="col-md-2"><label class="form-check"><input type="checkbox" name="can_players" checked> Игроки</label></div>
+            <div class="col-md-2"><label class="form-check"><input type="checkbox" name="can_photos" checked> Фото</label></div>
+            <div class="col-md-2"><button type="submit" class="btn btn-warning w-100">Назначить</button></div>
+        </form>
+    </div>
+    
+    <!-- АДМИН: НАЗНАЧЕНИЕ СТАТИСТА -->
+    <div class="panel-section mt-4">
+        <h4>📊 Назначить статиста</h4>
+        <form method="post" action="{% url 'users:assign_statistician' %}" class="row g-2">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <select name="user_id" class="form-select">
+                    {% for u in all_users %}<option value="{{ u.id }}">{{ u.full_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select name="match_id" class="form-select">
+                    {% for m in matches %}<option value="{{ m.id }}">{{ m }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2"><button type="submit" class="btn btn-warning w-100">Назначить</button></div>
+        </form>
+    </div>
+    
+    <!-- ЖАЛОБЫ -->
+    <div class="panel-section mt-4">
+        <h4>🚨 Жалобы</h4>
+        {% if reports %}
+        <div class="table-responsive">
+            <table class="table admin-table">
+                <thead><tr><th>От</th><th>На</th><th>Причина</th><th>Дата</th><th>Действие</th></tr></thead>
+                <tbody>
+                    {% for r in reports %}
+                    <tr>
+                        <td>{{ r.reporter.full_name }}</td>
+                        <td>{{ r.reported.full_name }}</td>
+                        <td>{{ r.reason|truncatechars:50 }}</td>
+                        <td>{{ r.created_at|date:"d.m.Y" }}</td>
+                        <td><a href="{% url 'users:resolve_report' r.id %}" class="btn btn-sm btn-success">Решена</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<p>Жалоб нет.</p>{% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- МОДЕРАТОР -->
+    {% if user.role == 'MODERATOR' %}
+    <div class="panel-section">
+        <h4>🏆 Мои чемпионаты</h4>
+        {% for champ in moderated_champs %}
+            <div class="card p-3 mb-2" style="background:var(--card-bg); border-left:5px solid {{ champ.primary_color }}">
+                <h5>{{ champ.name }}</h5>
+                <p>{{ champ.description|truncatechars:100 }}</p>
+                <a href="{% url 'leagues:detail' champ.pk %}" class="btn btn-outline-primary btn-sm">Перейти</a>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="panel-section mt-4">
+        <h4>📋 Последние матчи</h4>
+        <div class="table-responsive">
+            <table class="table admin-table">
+                <thead><tr><th>Дата</th><th>Матч</th><th>Счёт</th><th>Статус</th></tr></thead>
+                <tbody>
+                    {% for m in moderated_matches %}
+                    <tr>
+                        <td>{{ m.date_time|date:"d.m.Y" }}</td>
+                        <td>{{ m.team_home.name }} vs {{ m.team_away.name }}</td>
+                        <td>{{ m.score_home|default:'-' }}:{{ m.score_away|default:'-' }}</td>
+                        <td>{{ m.get_status_display }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- СУДЬЯ -->
+    {% if user.role == 'REFEREE' %}
+    <div class="panel-section">
+        <h4>📋 Все матчи</h4>
+        <div class="table-responsive">
+            <table class="table admin-table">
+                <thead><tr><th>Дата</th><th>Матч</th><th>Чемпионат</th><th>Счёт</th></tr></thead>
+                <tbody>
+                    {% for m in all_matches %}
+                    <tr>
+                        <td>{{ m.date_time|date:"d.m.Y H:i" }}</td>
+                        <td>{{ m.team_home.name }} vs {{ m.team_away.name }}</td>
+                        <td>{{ m.championship.short_name }}</td>
+                        <td>{{ m.score_home|default:'-' }}:{{ m.score_away|default:'-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- СТАТИСТ -->
+    {% if user.role == 'STATISTICIAN' %}
+    <div class="panel-section">
+        <h4>📊 Мои назначения (активные)</h4>
+        {% if active_assignments %}
+            {% for a in active_assignments %}
+                <div class="card p-3 mb-2" style="background:var(--card-bg);">
+                    <strong>{{ a.match }}</strong><br>
+                    <small>Начало: {{ a.match.date_time|date:"d.m.Y H:i" }}</small><br>
+                    <small>Редактировать до: {{ a.can_edit_until|date:"d.m.Y H:i" }}</small><br>
+                    <a href="#" class="btn btn-warning btn-sm mt-2">Внести протокол</a>
+                </div>
+            {% endfor %}
+        {% else %}<p>Нет активных назначений.</p>{% endif %}
+    </div>
+    <div class="panel-section mt-4">
+        <h4>📜 История назначений</h4>
+        <div class="table-responsive">
+            <table class="table admin-table">
+                <thead><tr><th>Матч</th><th>Назначен</th></tr></thead>
+                <tbody>
+                    {% for a in my_assignments %}
+                    <tr><td>{{ a.match }}</td><td>{{ a.assigned_at|date:"d.m.Y" }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
