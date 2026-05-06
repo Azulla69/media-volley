@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Выход{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4 text-center">
+        <div class="card p-4" style="background: var(--card-bg); box-shadow: var(--shadow); border-radius: 20px;">
+            <h3 class="mb-3">👋 Выход из аккаунта</h3>
+            <p class="section-subtitle">Вы уверены, что хотите выйти?</p>
+            <form method="post" action="{% url 'users:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning btn-lg px-4">Выйти</button>
+                <a href="{% url 'core:home' %}" class="btn btn-outline-light btn-lg px-4 ms-2">Отмена</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

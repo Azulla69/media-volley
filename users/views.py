@@ -23,9 +23,9 @@ import calendar
 User = get_user_model()
 
 
-class CustomLoginView(LoginView):
-    template_name = 'users/login.html'
-    authentication_form = CustomAuthenticationForm
+class CustomLogoutView(LogoutView):
+    template_name = 'users/logout.html'
+    next_page = 'core:home'
 
 
 class CustomLogoutView(LogoutView):
