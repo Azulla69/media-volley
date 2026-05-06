@@ -44,6 +44,8 @@ class CustomUserCreationForm(UserCreationForm):
 
 
 class CustomAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(label='Логин или Email', widget=forms.TextInput(attrs={'placeholder': 'Введите логин или почту'}))
+    
     class Meta:
         model = User
         fields = ['username', 'password']

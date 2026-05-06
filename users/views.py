@@ -3,7 +3,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.decorators import login_required
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.db.models import Sum
 from django.contrib.auth import get_user_model
@@ -23,14 +22,35 @@ import calendar
 User = get_user_model()
 
 
+from django.contrib.auth import authenticate
+
+class CustomLoginView(LoginView):
+    template_name = 'users/login.html'
+    authentication_form = CustomAuthenticationForm
+    
+    def form_valid(self, form):
+        username = form.cleaned_data.get('username')
+        password = form.cleaned_data.get('password')
+        
+        # Пробуем найти пользователя по логину или почте
+        user = User.objects.filter(username=username).first() or User.objects.filter(email=username).first()
+        
+        if user:
+            user = authenticate(self.request, username=user.username, password=password)
+        else:
+            user = None
+        
+        if user is not None:
+            login(self.request, user)
+            return redirect(self.get_success_url())
+        
+        form.add_error(None, 'Неверный логин/почта или пароль.')
+        return self.form_invalid(form)
+
+
 class CustomLogoutView(LogoutView):
     template_name = 'users/logout.html'
     next_page = 'core:home'
-
-
-class CustomLogoutView(LogoutView):
-    next_page = 'core:home'
-
 
 def register_view(request):
     if request.method == 'POST':
@@ -40,6 +60,18 @@ def register_view(request):
             user.is_active = False
             user.role = 'PLAYER'
             user.save()
+            
+            # Назначаем случайный аватар
+            import os, random
+            avatar_dir = os.path.join(settings.BASE_DIR, 'static', 'img', 'avatars')
+            if os.path.exists(avatar_dir):
+                avatars = [f for f in os.listdir(avatar_dir) if f.endswith(('.png', '.jpg', '.jpeg', '.svg'))]
+                if avatars:
+                    random_avatar = random.choice(avatars)
+                    import shutil
+                    from django.core.files import File
+                    avatar_path = os.path.join(avatar_dir, random_avatar)
+                    user.avatar.save(random_avatar, File(open(avatar_path, 'rb')), save=True)
             
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
