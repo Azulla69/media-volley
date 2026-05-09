@@ -7,20 +7,34 @@
 <div class="profile-page">
     <div class="container">
         <div class="row">
-            <!-- ЛЕВАЯ КОЛОНКА -->
             <div class="col-lg-4 mb-4">
                 <div class="profile-card">
                     <div class="profile-avatar-wrapper">
                         {% if player.avatar %}
                             <img src="{{ player.avatar.url }}" class="profile-avatar" alt="{{ player.first_name }} {{ player.last_name }}">
                         {% else %}
-                            <div class="profile-avatar-placeholder">
-                                {{ player.first_name|first }}{{ player.last_name|first }}
-                            </div>
+                            <div class="profile-avatar-placeholder">{{ player.first_name|first }}{{ player.last_name|first }}</div>
                         {% endif %}
                     </div>
                     
                     <h3 class="profile-name">{{ player.first_name }} {{ player.last_name }}</h3>
+                    
+                    {% if player.vk_link or player.tg_link or player.tg_channel or player.max_link %}
+                    <div class="profile-socials">
+                        {% if player.vk_link %}<a href="{{ player.vk_link }}" class="social-vk" target="_blank">VK</a>{% endif %}
+                        {% if player.tg_link %}<a href="{{ player.tg_link }}" class="social-tg" target="_blank">TG</a>{% endif %}
+                        {% if player.tg_channel %}<a href="{{ player.tg_channel }}" class="social-tg-channel" target="_blank">📢</a>{% endif %}
+                        {% if player.max_link %}<a href="{{ player.max_link }}" class="social-max" target="_blank">M</a>{% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    {% if is_birthday %}
+                    <div class="birthday-banner"><span class="birthday-icon">🎂</span> С днём рождения!</div>
+                    {% endif %}
+                    
+                    {% if rating_position %}
+                    <div class="rating-badge"><span class="rating-icon">📊</span> <strong>{{ rating_position }}</strong> место в рейтинге</div>
+                    {% endif %}
                     
                     {% if player.bio %}
                         <p class="profile-bio">{{ player.bio }}</p>
@@ -29,41 +43,24 @@
                     {% endif %}
                     
                     {% if hot_streak > 0 %}
-                    <div class="hot-streak">
-                        <span class="hot-streak-icon">🔥</span>
-                        <span class="hot-streak-text">Победная серия: <strong>{{ hot_streak }}</strong> матчей!</span>
-                    </div>
+                    <div class="hot-streak"><span class="hot-streak-icon">🔥</span> Победная серия: <strong>{{ hot_streak }}</strong> матчей!</div>
                     {% endif %}
                     
                     <button class="btn btn-outline-secondary btn-sm mt-2" onclick="shareProfile()">🔗 Поделиться</button>
+                    {% if is_owner %}<a href="{% url 'users:profile_edit' %}" class="btn btn-outline-primary btn-sm mt-2">✏️ Редактировать</a>{% endif %}
                     
-                    {% if is_owner %}
-                        <a href="{% url 'users:profile_edit' %}" class="btn btn-outline-primary btn-sm mt-2">✏️ Редактировать</a>
-                    {% endif %}
-                    
-                    <!-- КАЛЕНДАРЬ -->
                     <div class="match-calendar mt-3">
                         <h5 class="calendar-title">📅 {{ today|date:"F Y" }}</h5>
                         <table class="calendar-table">
                             <thead><tr><th>Пн</th><th>Вт</th><th>Ср</th><th>Чт</th><th>Пт</th><th>Сб</th><th>Вс</th></tr></thead>
-                            <tbody>
-                                {% for week in calendar_data %}
-                                    <tr>
-                                        {% for d in week %}
-                                            <td class="{% if d.has_match %}has-match{% endif %}">{{ d.day }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
+                            <tbody>{% for week in calendar_data %}<tr>{% for d in week %}<td class="{% if d.has_match %}has-match{% endif %}">{{ d.day }}</td>{% endfor %}</tr>{% endfor %}</tbody>
                         </table>
                         <div class="calendar-legend"><span class="legend-dot"></span> — матч</div>
                     </div>
                 </div>
             </div>
             
-            <!-- ПРАВАЯ КОЛОНКА -->
             <div class="col-lg-8">
-                <!-- ВКЛАДКИ -->
                 <div class="stat-tabs">
                     <button class="stat-tab active" onclick="switchStats('total')">Общая</button>
                     <button class="stat-tab" onclick="switchStats('classic')">🏐 Классика</button>
@@ -71,22 +68,6 @@
                     <button class="stat-tab" onclick="switchStats('park')">🌳 Парк</button>
                 </div>
                 
-                {% for stype, stats, matches in stats_list %}
-                <div class="stat-panel {% if stype == 'total' %}active{% endif %}" id="stats-{{ stype }}">
-                    <div class="text-center mb-4">
-                        <div class="total-matches">{{ matches }}</div>
-                        <div class="section-subtitle">Всего матчей</div>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
-                        <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
-                        <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
-                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
-                    </div>
-                </div>
-                {% endfor %}
-                
-                <!-- ВКЛАДКИ РУКАМИ (шаблон не поддерживает динамические переменные) -->
                 <div class="stat-panel active" id="stats-total">
                     <div class="text-center mb-4"><div class="total-matches">{{ total_matches }}</div><div class="section-subtitle">Всего матчей</div></div>
                     <div class="row g-3">
@@ -96,6 +77,7 @@
                         <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ total_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
                     </div>
                 </div>
+                
                 <div class="stat-panel" id="stats-classic">
                     <div class="text-center mb-4"><div class="total-matches">{{ classic_matches }}</div><div class="section-subtitle">Матчей в классике</div></div>
                     <div class="row g-3">
@@ -105,6 +87,7 @@
                         <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ classic_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
                     </div>
                 </div>
+                
                 <div class="stat-panel" id="stats-beach">
                     <div class="text-center mb-4"><div class="total-matches">{{ beach_matches }}</div><div class="section-subtitle">Матчей в пляжке</div></div>
                     <div class="row g-3">
@@ -114,6 +97,7 @@
                         <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ beach_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
                     </div>
                 </div>
+                
                 <div class="stat-panel" id="stats-park">
                     <div class="text-center mb-4"><div class="total-matches">{{ park_matches }}</div><div class="section-subtitle">Матчей в парковом</div></div>
                     <div class="row g-3">
@@ -124,37 +108,58 @@
                     </div>
                 </div>
                 
-                <!-- ЧЕМПИОНАТЫ -->
                 <div class="championships-section mt-4">
                     <h4 class="section-heading">🏆 Чемпионаты</h4>
-                    {% if current_championships %}
-                        <h6 class="section-subtitle mb-2">✅ Участвует сейчас</h6>
-                        <div class="row g-2 mb-3">
-                            {% for tp in current_championships %}
-                                <div class="col-md-6"><div class="champ-badge" style="border-left:4px solid {{ tp.team.championship.primary_color }}"><strong>{{ tp.team.championship.name }}</strong><br><small>{{ tp.team.name }} • #{{ tp.jersey_number }} • {{ tp.get_position_display }}</small></div></div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                    {% if past_championships %}
-                        <h6 class="section-subtitle mb-2">📅 Участвовал ранее</h6>
-                        <div class="row g-2">
-                            {% for tp in past_championships %}
-                                <div class="col-md-6"><div class="champ-badge past" style="border-left:4px solid #888"><strong>{{ tp.team.championship.name }}</strong><br><small>{{ tp.team.name }} • {{ tp.get_position_display }}</small></div></div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                    {% if not current_championships and not past_championships %}
-                        <p class="section-subtitle">Пока не участвует ни в одном чемпионате</p>
-                    {% endif %}
+                    {% if current_championships %}<h6 class="section-subtitle mb-2">✅ Участвует сейчас</h6><div class="row g-2 mb-3">{% for tp in current_championships %}<div class="col-md-6"><div class="champ-badge" style="border-left:4px solid {{ tp.team.championship.primary_color }}"><strong>{{ tp.team.championship.name }}</strong><br><small>{{ tp.team.name }} • #{{ tp.jersey_number }} • {{ tp.get_position_display }}</small></div></div>{% endfor %}</div>{% endif %}
+                    {% if past_championships %}<h6 class="section-subtitle mb-2">📅 Участвовал ранее</h6><div class="row g-2">{% for tp in past_championships %}<div class="col-md-6"><div class="champ-badge past" style="border-left:4px solid #888"><strong>{{ tp.team.championship.name }}</strong><br><small>{{ tp.team.name }} • {{ tp.get_position_display }}</small></div></div>{% endfor %}</div>{% endif %}
+                    {% if not current_championships and not past_championships %}<p class="section-subtitle">Пока не участвует ни в одном чемпионате</p>{% endif %}
                 </div>
                 
-                <!-- НАГРАДЫ -->
-                {% if awards %}
+                {% if awards or site_awards %}
                 <div class="awards-section mt-4">
                     <h4 class="section-heading">🎖 Награды</h4>
-                    <div class="awards-grid">
+                    <div class="awards-grid" id="awardsGrid">
+                        {% for sa in site_awards %}
+                            <div class="award-card {{ sa.level }} {% if forloop.counter > 6 %}extra-award{% endif %}" style="{% if forloop.counter > 6 %}display:none;{% endif %}">
+                                <div class="award-icon">
+                                    {% if sa.award_type == 'matches' %}🌟
+                                    {% elif sa.award_type == 'bombardier' %}🔥
+                                    {% elif sa.award_type == 'attacker' %}⚡
+                                    {% elif sa.award_type == 'wall' %}🧱
+                                    {% elif sa.award_type == 'ace_machine' %}🎯
+                                    {% elif sa.award_type == 'recordman' %}📈
+                                    {% elif sa.award_type == 'king' %}🏆
+                                    {% elif sa.award_type == 'captain' %}🎖
+                                    {% elif sa.award_type == 'organizer' %}🛡
+                                    {% elif sa.award_type == 'statistician' %}📊
+                                    {% elif sa.award_type == 'referee' %}⚖️
+                                    {% endif %}
+                                </div>
+                                <div class="award-info">
+                                    <div class="award-name">
+                                        {% if sa.award_type == 'matches' %}
+                                            {% if sa.value >= 500 %}Бессмертный{% elif sa.value >= 100 %}Легенда{% elif sa.value >= 50 %}Железный человек{% elif sa.value >= 10 %}Ветеран{% elif sa.value >= 5 %}Любитель{% else %}Дебютант{% endif %}
+                                        {% elif sa.award_type == 'bombardier' %}Бомбардир
+                                        {% elif sa.award_type == 'attacker' %}Атакующий
+                                        {% elif sa.award_type == 'wall' %}Стена
+                                        {% elif sa.award_type == 'ace_machine' %}Эйс-машина
+                                        {% elif sa.award_type == 'recordman' %}Рекордсмен
+                                        {% elif sa.award_type == 'king' %}Король турниров
+                                        {% elif sa.award_type == 'captain' %}Капитан
+                                        {% elif sa.award_type == 'organizer' %}Организатор
+                                        {% elif sa.award_type == 'statistician' %}Статист
+                                        {% elif sa.award_type == 'referee' %}Судья
+                                        {% endif %}
+                                    </div>
+                                    <div class="award-detail">{{ sa.get_level_display }}{% if sa.award_type == 'recordman' %} • {{ sa.value }} очков{% elif sa.award_type == 'matches' or sa.award_type == 'captain' or sa.award_type == 'organizer' or sa.award_type == 'statistician' or sa.award_type == 'referee' %} • {{ sa.value }} раз{% endif %}</div>
+                                    <div class="award-footer">
+                                        <span class="award-champ">{{ sa.progress_text }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
                         {% for award in awards %}
-                            <div class="award-card {{ award.color }}">
+                            <div class="award-card {{ award.color }} {% if forloop.counter > 6 %}extra-award{% endif %}" style="{% if forloop.counter > 6 %}display:none;{% endif %}">
                                 <div class="award-icon">{{ award.icon }}</div>
                                 <div class="award-info">
                                     <div class="award-name">{{ award.name }}</div>
@@ -167,10 +172,14 @@
                             </div>
                         {% endfor %}
                     </div>
+                    {% if awards|length > 6 or site_awards|length > 6 %}
+                    <button class="btn btn-outline-light btn-sm mt-3" onclick="toggleAwards()" id="showAwardsBtn">
+                        🏅 Показать все награды ({{ awards|length|add:site_awards|length }})
+                    </button>
+                    {% endif %}
                 </div>
                 {% endif %}
                 
-                <!-- ПОСЛЕДНИЕ МАТЧИ -->
                 <div class="matches-section mt-4">
                     <h4 class="section-heading">📋 Последние матчи</h4>
                     {% if recent_matches %}
@@ -178,30 +187,79 @@
                             {% for stat in recent_matches %}
                                 <div class="match-row">
                                     <div class="match-date">{{ stat.match.date_time|date:"d.m.Y" }}</div>
-                                    <div class="match-teams-small">
-                                        <span class="team-a">{{ stat.match.team_home.name }}</span>
-                                        <span class="match-score">
-                                            {% if stat.match.score_home is not None %}
-                                                {{ stat.match.score_home }}:{{ stat.match.score_away }}
-                                            {% else %}
-                                                vs
-                                            {% endif %}
-                                        </span>
-                                        <span class="team-b">{{ stat.match.team_away.name }}</span>
-                                    </div>
-                                    <div class="match-player-stats">
-                                        <span class="stat-badge attack" title="Атака">{{ stat.points_attack }}</span>
-                                        <span class="stat-badge block" title="Блок">{{ stat.points_block }}</span>
-                                        <span class="stat-badge serve" title="Подача">{{ stat.points_serve }}</span>
-                                        <span class="stat-badge total" title="Всего">{{ stat.total_points }}</span>
-                                    </div>
+                                    <div class="match-teams-small"><span class="team-a">{{ stat.match.team_home.name }}</span><span class="match-score">{% if stat.match.score_home is not None %}{{ stat.match.score_home }}:{{ stat.match.score_away }}{% else %}vs{% endif %}</span><span class="team-b">{{ stat.match.team_away.name }}</span></div>
+                                    <div class="match-player-stats"><span class="stat-badge attack">{{ stat.points_attack }}</span><span class="stat-badge block">{{ stat.points_block }}</span><span class="stat-badge serve">{{ stat.points_serve }}</span><span class="stat-badge total">{{ stat.total_points }}</span></div>
                                     <div class="match-champ-name">{{ stat.match.championship.short_name }}</div>
                                 </div>
                             {% endfor %}
                         </div>
-                    {% else %}
-                        <p class="section-subtitle">Пока не сыграно ни одного матча</p>
+                    {% else %}<p class="section-subtitle">Пока не сыграно ни одного матча</p>{% endif %}
+                    
+                    {% if total_matches > 3 %}
+                    <button class="btn btn-outline-light btn-sm mt-3" onclick="toggleAllMatches()" id="showAllBtn">
+                        📜 Показать все матчи ({{ total_matches }})
+                    </button>
                     {% endif %}
+                    
+                    <div id="allMatches" style="display:none;" class="mt-3">
+                        <div class="all-matches-header">
+                            <h5>📜 Все матчи</h5>
+                            <button class="btn-close-custom" onclick="toggleAllMatches()">✕</button>
+                        </div>
+                        <form method="get" class="filter-bar">
+                            <div class="filter-group">
+                                <input type="text" name="champ_search" class="form-control form-control-sm" placeholder="🔍 Название турнира..." value="{{ filter_champ_search }}" list="champList" oninput="this.form.submit()">
+                                <datalist id="champList">{% for c in all_championships %}<option value="{{ c.name }}">{% endfor %}</datalist>
+                            </div>
+                            <div class="filter-group">
+                                <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    <option value="">🏐 Все типы</option>
+                                    <option value="CLASSIC" {% if filter_type == 'CLASSIC' %}selected{% endif %}>🏐 Классика</option>
+                                    <option value="BEACH" {% if filter_type == 'BEACH' %}selected{% endif %}>🏖 Пляж</option>
+                                    <option value="PARK" {% if filter_type == 'PARK' %}selected{% endif %}>🌳 Парк</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    <option value="">📅 Все годы</option>
+                                    {% for y in years %}<option value="{{ y }}" {% if filter_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            {% if filter_champ_search or filter_type or filter_year %}
+                            <div class="filter-group"><a href="?" class="btn btn-sm btn-outline-danger">✕ Сбросить</a></div>
+                            {% endif %}
+                        </form>
+                        <div class="table-responsive">
+                            <table class="table table-sm match-table-all">
+                                <thead><tr><th>Дата</th><th>Турнир</th><th>Матч</th><th>ОЗ</th><th>ОБ</th><th>ОП</th><th>О</th></tr></thead>
+                                <tbody>
+                                    {% for stat in page_obj %}
+                                    <tr>
+                                        <td>{{ stat.match.date_time|date:"d.m.Y" }}</td>
+                                        <td><span class="champ-tag" style="background:{{ stat.match.championship.primary_color }}20;color:{{ stat.match.championship.primary_color }};padding:2px 8px;border-radius:10px;font-size:0.8rem;">{{ stat.match.championship.short_name }}</span></td>
+                                        <td><small>{{ stat.match.team_home.name }} vs {{ stat.match.team_away.name }}</small></td>
+                                        <td>{{ stat.points_attack }}</td>
+                                        <td>{{ stat.points_block }}</td>
+                                        <td>{{ stat.points_serve }}</td>
+                                        <td><strong>{{ stat.total_points }}</strong></td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="7" class="text-center section-subtitle">Матчи не найдены</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if page_obj.paginator.num_pages > 1 %}
+                        <div class="pagination-wrapper">
+                            <div class="pagination-info">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</div>
+                            <ul class="pagination pagination-sm justify-content-center">
+                                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&champ_search={{ filter_champ_search }}&type={{ filter_type }}&year={{ filter_year }}">←</a></li>{% endif %}
+                                {% for num in page_obj.paginator.page_range %}<li class="page-item {% if num == page_obj.number %}active{% endif %}"><a class="page-link" href="?page={{ num }}&champ_search={{ filter_champ_search }}&type={{ filter_type }}&year={{ filter_year }}">{{ num }}</a></li>{% endfor %}
+                                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&champ_search={{ filter_champ_search }}&type={{ filter_type }}&year={{ filter_year }}">→</a></li>{% endif %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -211,9 +269,13 @@
 
 {% block extra_js %}
 <script>
-function switchStats(type){document.querySelectorAll('.stat-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.stat-panel').forEach(p=>p.classList.remove('active'));document.getElementById('stats-'+type).classList.add('active');event.target.classList.add('active');document.querySelectorAll('#stats-'+type+' .count-up').forEach(el=>{animateNumber(el)})}
-function animateNumber(el){const target=+el.dataset.target;let current=0;const step=target/40;const timer=setInterval(()=>{current+=step;if(current>=target){el.textContent=target;clearInterval(timer)}else{el.textContent=Math.floor(current)}},25)}
-document.querySelectorAll('#stats-total .count-up').forEach(el=>animateNumber(el));
+function switchStats(t){document.querySelectorAll('.stat-tab').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.stat-panel').forEach(e=>e.classList.remove('active'));document.getElementById('stats-'+t).classList.add('active');event.target.classList.add('active');document.querySelectorAll('#stats-'+t+' .count-up').forEach(e=>{animateNumber(e)})}
+function animateNumber(e){let t=+e.dataset.target,n=0;const o=t/40;const r=setInterval(()=>{n+=o;if(n>=t){e.textContent=t;clearInterval(r)}else{e.textContent=Math.floor(n)}},25)}
+document.querySelectorAll('#stats-total .count-up').forEach(e=>animateNumber(e));
 function shareProfile(){navigator.clipboard.writeText(window.location.href).then(()=>{alert('Ссылка скопирована!')})}
+
+function toggleAwards(){const b=document.getElementById('showAwardsBtn');const h=document.querySelectorAll('.extra-award');const v=h[0].style.display==='none';h.forEach(e=>e.style.display=v?'block':'none');b.textContent=v?'🏅 Скрыть':'🏅 Показать все награды ('+h.length+')'}
+
+function toggleAllMatches(){const b=document.getElementById('allMatches');const n=document.getElementById('showAllBtn');if(b.style.display==='none'){b.style.display='block';if(n)n.style.display='none'}else{b.style.display='none';if(n)n.style.display='block'}}
 </script>
 {% endblock %}

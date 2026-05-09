@@ -134,46 +134,31 @@
             <p class="section-subtitle">Выберите турнир и следите за игрой</p>
         </div>
         <div class="row g-4">
+            {% for champ in championships %}
             <div class="col-md-6 col-lg-3 d-flex">
-                <div class="champ-card reveal w-100">
-                    <div class="champ-img champ-1"></div>
-                    <div class="champ-body">
-                        <h5>Ночная волейбольная лига</h5>
-                        <p>Хабаровск</p>
-                        <span class="badge bg-primary">Классика</span>
+                <a href="{% url 'leagues:detail' champ.pk %}" class="champ-card-link w-100 text-decoration-none">
+                    <div class="champ-card reveal w-100">
+                        <div class="champ-img" style="background: linear-gradient(135deg, {{ champ.primary_color }}, {{ champ.primary_color }}dd);">
+                            <div class="champ-img-content">
+                                <span class="champ-emoji">
+                                    {% if champ.league_type == 'CLASSIC' %}🏐
+                                    {% elif champ.league_type == 'BEACH' %}🏖
+                                    {% else %}🌳{% endif %}
+                                </span>
+                            </div>
+                            <div class="champ-stage-badge">{{ champ.get_stage_display }}</div>
+                        </div>
+                        <div class="champ-body">
+                            <h5>{{ champ.name }}</h5>
+                            <p>{{ champ.description|truncatewords:12 }}</p>
+                            <span class="badge" style="background:{{ champ.primary_color }};">{{ champ.get_league_type_display }}</span>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
-            <div class="col-md-6 col-lg-3 d-flex">
-                <div class="champ-card reveal w-100">
-                    <div class="champ-img champ-2"></div>
-                    <div class="champ-body">
-                        <h5>Рандом волейбол</h5>
-                        <p>Случайные составы</p>
-                        <span class="badge bg-danger">Классика</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3 d-flex">
-                <div class="champ-card reveal w-100">
-                    <div class="champ-img champ-3"></div>
-                    <div class="champ-body">
-                        <h5>Кубок Факела</h5>
-                        <p>Ежегодный кубок</p>
-                        <span class="badge bg-warning text-dark">Классика</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3 d-flex">
-                <div class="champ-card reveal w-100">
-                    <div class="champ-img champ-4"></div>
-                    <div class="champ-body">
-                        <h5>Кубок Губернатора</h5>
-                        <p>Пляжный волейбол</p>
-                        <span class="badge bg-info">Пляж</span>
-                    </div>
-                </div>
-            </div>
+            {% empty %}
+            <div class="col-12 text-center"><p class="section-subtitle">Чемпионаты скоро появятся.</p></div>
+            {% endfor %}
         </div>
     </div>
 </section>

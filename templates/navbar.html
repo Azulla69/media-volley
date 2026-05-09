@@ -12,6 +12,11 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'leagues:list' %}"><span class="nav-icon">🏆</span> Чемпионаты</a>
                 </li>
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'teams:my_teams' %}"><span class="nav-icon">👥</span> Мои команды</a>
+                </li>
+                {% endif %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'stats:leaders' %}"><span class="nav-icon">📊</span> Рейтинг</a>
                 </li>
@@ -27,6 +32,18 @@
                 </li>
                 
                 {% if user.is_authenticated %}
+                <li class="nav-item ms-2">
+                    <a class="nav-link position-relative" href="#" id="notifBell" onclick="toggleNotif()" style="font-size:1.2rem;">
+                        🔔
+                        <span class="notif-badge" id="notifCount" style="display:none;">0</span>
+                    </a>
+                    <div id="notifDropdown" class="notif-dropdown" style="display:none;">
+                        <div class="notif-list" id="notifList">
+                            <p class="section-subtitle p-2">Загрузка...</p>
+                        </div>
+                    </div>
+                </li>
+                
                 <li class="nav-item dropdown ms-2">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                         <span class="avatar-sm">{{ user.first_name|first }}{{ user.last_name|first }}</span>
@@ -55,3 +72,75 @@
         </div>
     </div>
 </nav>
+
+<script>
+async function loadNotifications() {
+    try {
+        const res = await fetch('/core/notifications/');
+        const data = await res.json();
+        const unread = data.filter(n => !n.is_read);
+        const badge = document.getElementById('notifCount');
+        if (unread.length > 0) {
+            badge.textContent = unread.length;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
+        const list = document.getElementById('notifList');
+        if (data.length === 0) {
+            list.innerHTML = '<p class="section-subtitle p-2">Уведомлений нет</p>';
+        } else {
+            list.innerHTML = data.map(n => {
+                let actions = '';
+                if (n.invite_id && !n.is_read) {
+                    actions = `
+                        <div class="d-flex gap-1 mt-2">
+                            <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); acceptInvite(${n.invite_id}, this)">Принять</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); declineInvite(${n.invite_id}, this)">Отклонить</button>
+                        </div>`;
+                }
+                return `
+                    <div class="notif-item ${n.is_read ? '' : 'unread'}">
+                        <div onclick="markRead(${n.id})">${n.message}<small>${n.created_at}</small></div>
+                        ${actions}
+                    </div>`;
+            }).join('');
+        }
+    } catch(e) {
+        document.getElementById('notifList').innerHTML = '<p class="section-subtitle p-2">Ошибка</p>';
+    }
+}
+
+async function acceptInvite(inviteId, btn) {
+    const res = await fetch('/core/invites/accept/' + inviteId + '/');
+    const data = await res.json();
+    if (data.ok) {
+        btn.textContent = '✅ Принято';
+        btn.disabled = true;
+        btn.parentElement.querySelector('.btn-outline-danger').style.display = 'none';
+        loadNotifications();
+    } else {
+        alert(data.error || 'Ошибка');
+    }
+}
+
+async function declineInvite(inviteId, btn) {
+    await fetch('/core/invites/decline/' + inviteId + '/');
+    btn.textContent = '❌ Отклонено';
+    btn.disabled = true;
+    btn.parentElement.querySelector('.btn-success').style.display = 'none';
+    loadNotifications();
+}
+
+function toggleNotif() {
+    const d = document.getElementById('notifDropdown');
+    d.style.display = d.style.display === 'none' ? 'block' : 'none';
+    loadNotifications();
+}
+
+function markRead(id) {
+    fetch('/core/notifications/read/' + id + '/');
+}
+
+loadNotifications();
+</script>

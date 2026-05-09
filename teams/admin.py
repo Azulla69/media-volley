@@ -9,6 +9,5 @@ class TeamPlayerInline(admin.TabularInline):
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
-    list_display = ['name', 'championship', 'captain']
-    list_filter = ['championship']
+    list_display = ['name', 'captain', 'created_at']
     inlines = [TeamPlayerInline]

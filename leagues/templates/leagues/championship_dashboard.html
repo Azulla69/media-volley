@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}Управление — {{ championship.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>⚙️ {{ championship.name }}</h2>
+        <a href="{% url 'leagues:detail' championship.pk %}" class="btn btn-outline-light btn-sm">← На чемпионат</a>
+    </div>
+
+    <!-- СВОДКА -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ championship.get_stage_display }}</div><div class="dash-label">Этап</div></div></div>
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ applications.count }}</div><div class="dash-label">Заявок</div></div></div>
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ approved_teams.count }}</div><div class="dash-label">Одобрено</div></div></div>
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ matches.count }}</div><div class="dash-label">Матчей</div></div></div>
+    </div>
+
+    <!-- БЫСТРЫЕ ДЕЙСТВИЯ -->
+    <div class="panel-section mb-4">
+        <h5>⚡ Быстрые действия</h5>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if championship.stage == 'applications' and applications.exists %}
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="end_applications"><button class="btn btn-warning" onclick="return confirm('Завершить приём заявок?')">📋 Завершить приём заявок</button></form>
+            {% endif %}
+            {% if championship.stage == 'review' %}
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="reopen_applications"><button class="btn btn-outline-warning" onclick="return confirm('Вернуться к приёму заявок?')">🔄 Вернуть приём заявок</button></form>
+                {% if approved_teams.count >= 2 %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="start_championship"><button class="btn btn-success" onclick="return confirm('Начать чемпионат?')">▶️ Начать</button></form>{% endif %}
+            {% endif %}
+            {% if championship.stage == 'active' %}
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="pause_championship"><button class="btn btn-outline-warning" onclick="return confirm('Вернуть на этап приёма заявок?')">⏸ Вернуть на приём заявок</button></form>
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="finish_championship"><button class="btn btn-danger" onclick="return confirm('Завершить?')">🏁 Завершить</button></form>
+            {% endif %}
+            {% if championship.stage == 'finished' %}
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="reopen_championship"><button class="btn btn-outline-warning" onclick="return confirm('Вернуть чемпионат в активную стадию?')">🔄 Вернуть в игру</button></form>
+            {% endif %}
+            <button class="btn btn-outline-info" onclick="toggleBlock('captainsInfo')">👤 Данные о капитанах</button>
+        </div>
+        
+        <!-- ДАННЫЕ О КАПИТАНАХ -->
+        <div id="captainsInfo" class="popup-block mt-3" style="display:none;">
+            <div class="d-flex justify-content-between mb-2"><strong>👤 Капитаны команд</strong><button class="btn btn-sm btn-outline-light" onclick="toggleBlock('captainsInfo')">✕</button></div>
+            <div class="table-responsive">
+                <table class="table admin-table">
+                    <thead><tr><th>Команда</th><th>Капитан</th><th>Телефон</th><th>Почта</th><th>Соцсети</th></tr></thead>
+                    <tbody>
+                        {% for app in approved_teams %}
+                        <tr><td>{{ app.team.name }}</td><td>{{ app.team.captain.full_name|default:'—' }}</td><td>{{ app.team.captain.phone|default:'—' }}</td><td>{{ app.team.captain.email|default:'—' }}</td><td>{% if app.team.captain.vk_link %}<a href="{{ app.team.captain.vk_link }}" class="badge bg-primary me-1" target="_blank">VK</a>{% endif %}{% if app.team.captain.tg_link %}<a href="{{ app.team.captain.tg_link }}" class="badge bg-info me-1" target="_blank">TG</a>{% endif %}{% if not app.team.captain.vk_link and not app.team.captain.tg_link %}—{% endif %}</td></tr>
+                        {% empty %}<tr><td colspan="5" class="section-subtitle">Нет одобренных команд.</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ТАБЫ -->
+    <div class="champ-tabs" style="position:static; border-bottom:2px solid var(--border); margin-bottom:20px;">
+        <div class="d-flex">
+            <a href="#" class="champ-tab active" onclick="switchTab('applications'); return false;">📋 Заявки</a>
+            <a href="#" class="champ-tab" onclick="switchTab('schedule'); return false;">📅 Расписание</a>
+        </div>
+    </div>
+
+    <!-- ЗАЯВКИ -->
+    <div class="tab-panel active" id="tab-applications">
+        <div class="panel-section">
+            {% if applications %}
+            <div class="table-responsive">
+                <table class="table admin-table">
+                    <thead><tr><th>Команда</th><th>Капитан</th><th>Игроков</th><th>Статус</th><th></th></tr></thead>
+                    <tbody>
+                        {% for app in applications %}
+                        <tr>
+                            <td><strong>{{ app.team.name }}</strong></td><td>{{ app.team.captain.full_name|default:'—' }}</td><td>{{ app.players.count }}</td><td>{% if app.is_approved %}✅{% else %}⏳{% endif %}</td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-outline-info" onclick="toggleAppInfo('appInfo{{ app.id }}')">ℹ️</button>
+                                    {% if not app.is_approved %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="approve"><input type="hidden" name="app_id" value="{{ app.id }}"><button class="btn btn-sm btn-success">✅</button></form>{% endif %}
+                                    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="reject"><input type="hidden" name="app_id" value="{{ app.id }}"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('Отклонить?')">✕</button></form>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr id="appInfo{{ app.id }}" style="display:none;"><td colspan="5"><div class="popup-block"><div class="d-flex justify-content-between"><strong>{{ app.team.name }}</strong><button class="btn btn-sm btn-outline-light" onclick="toggleAppInfo('appInfo{{ app.id }}')">✕</button></div><p class="small">Основатель: {{ app.team.founder.full_name }}</p><p class="small">Капитан: {{ app.team.captain.full_name|default:'—' }}</p><p class="small">Игроков в заявке: {{ app.players.count }}</p><div class="players-list">{% for p in app.players.all %}<span class="badge bg-secondary me-1 mb-1">{{ p.full_name }}</span>{% endfor %}</div><a href="{% url 'teams:team_detail' app.team.id %}" class="btn btn-sm btn-outline-light mt-2" target="_blank">🌐 Страничка команды</a></div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}<p class="section-subtitle">Нет заявок.</p>{% endif %}
+        </div>
+    </div>
+
+    <!-- РАСПИСАНИЕ -->
+    <div class="tab-panel" id="tab-schedule" style="display:none;">
+        <div class="row">
+            <div class="col-md-5">
+                <div class="panel-section">
+                    <h5>➕ Новый матч</h5>
+                    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="create_match">
+                        <div class="mb-2"><select name="team_home" class="form-select form-select-sm" required>{% for app in approved_teams %}<option value="{{ app.team.id }}">{{ app.team.name }}</option>{% endfor %}</select></div>
+                        <div class="mb-2"><select name="team_away" class="form-select form-select-sm" required>{% for app in approved_teams %}<option value="{{ app.team.id }}">{{ app.team.name }}</option>{% endfor %}</select></div>
+                        <div class="mb-2"><input type="datetime-local" name="date_time" class="form-control form-control-sm" required></div>
+                        <div class="mb-3"><input type="text" name="location" class="form-control form-control-sm" value="Спорткомплекс"></div>
+                        <button class="btn btn-warning btn-sm w-100">Добавить</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="panel-section"><h5>📅 Матчи</h5>
+                    {% if matches %}
+                    {% for m in matches %}
+                    <div class="match-item p-3 mb-2 rounded" style="background:var(--bg);">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div><strong>{{ m.date_time|date:"d.m.Y H:i" }}</strong><br>{{ m.team_home.name }} vs {{ m.team_away.name }}<br><small class="section-subtitle">{{ m.location }}</small></div>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if m.status == 'FINISHED' %}<span class="badge bg-success">{{ m.score_home }}:{{ m.score_away }}</span>
+                                {% else %}<form method="post" class="d-flex gap-1 align-items-center">{% csrf_token %}<input type="hidden" name="action" value="update_score"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="number" name="score_home" class="form-control form-control-sm" style="width:50px;" value="{{ m.score_home|default:'' }}"><span>:</span><input type="number" name="score_away" class="form-control form-control-sm" style="width:50px;" value="{{ m.score_away|default:'' }}"><button class="btn btn-sm btn-success">✓</button></form>{% endif %}
+                                <button class="btn btn-sm btn-outline-info" onclick="toggleEditMatch({{ m.id }})">✏️</button>
+                                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete_match"><input type="hidden" name="match_id" value="{{ m.id }}"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить?')">✕</button></form>
+                            </div>
+                        </div>
+                        <div id="editMatch{{ m.id }}" style="display:none;" class="mt-2">
+                            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_match"><input type="hidden" name="match_id" value="{{ m.id }}">
+                                <div class="row g-2"><div class="col-md-3"><input type="datetime-local" name="date_time" class="form-control form-control-sm" value="{{ m.date_time|date:'Y-m-d\TH:i' }}"></div><div class="col-md-3"><select name="team_home" class="form-select form-select-sm">{% for app in approved_teams %}<option value="{{ app.team.id }}" {% if app.team == m.team_home %}selected{% endif %}>{{ app.team.name }}</option>{% endfor %}</select></div><div class="col-md-3"><select name="team_away" class="form-select form-select-sm">{% for app in approved_teams %}<option value="{{ app.team.id }}" {% if app.team == m.team_away %}selected{% endif %}>{{ app.team.name }}</option>{% endfor %}</select></div><div class="col-md-2"><input type="text" name="location" class="form-control form-control-sm" value="{{ m.location }}"></div><div class="col-md-1"><button class="btn btn-sm btn-success">✓</button></div></div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}<p class="section-subtitle">Нет матчей.</p>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleBlock(id) { const el = document.getElementById(id); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
+function switchTab(tab) { document.querySelectorAll('.champ-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none'); document.getElementById('tab-' + tab).style.display = 'block'; event.target.classList.add('active'); }
+function toggleEditMatch(id) { const el = document.getElementById('editMatch' + id); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
+function toggleAppInfo(id) { const el = document.getElementById(id); el.style.display = el.style.display === 'none' ? 'table-row' : 'none'; }
+</script>
+{% endblock %}

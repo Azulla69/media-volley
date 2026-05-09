@@ -7,202 +7,330 @@
         <h2>🔧 Админ-панель</h2>
         <span class="badge bg-warning text-dark px-3 py-2">{{ user.get_role_display }}</span>
     </div>
-    
-    <!-- ДАШБОРД -->
-    <div class="row g-3 mb-4">
-        {% if user.role == 'ADMIN' %}
-        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ total_users }}</div><div>Пользователей</div></div></div>
-        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ total_reports }}</div><div>Жалоб</div></div></div>
-        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ championships|length }}</div><div>Чемпионатов</div></div></div>
-        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ matches|length }}</div><div>Матчей</div></div></div>
-        {% endif %}
-    </div>
-    
-    <!-- АДМИН: ПОЛЬЗОВАТЕЛИ -->
+
     {% if user.role == 'ADMIN' %}
-    <div class="panel-section">
-        <h4>👥 Пользователи</h4>
+    <div class="row g-2 mb-4">
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ total_users }}</div><div class="dash-label">Пользователей</div></div></div>
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ total_reports }}</div><div class="dash-label">Жалоб</div></div></div>
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ championships|length }}</div><div class="dash-label">Чемпионатов</div></div></div>
+        <div class="col-6 col-md-3"><div class="dash-card"><div class="dash-num">{{ matches|length }}</div><div class="dash-label">Матчей</div></div></div>
+    </div>
+    {% endif %}
+
+        <!-- ЧЕМПИОНАТЫ -->
+    {% if user.role == 'ADMIN' %}
+    <div class="panel-section mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>🏆 Мои чемпионаты</h4>
+            <a href="{% url 'users:create_championship' %}" class="btn btn-warning btn-sm">+ Создать</a>
+        </div>
+        <input type="text" class="form-control mb-3" placeholder="🔍 Мгновенный поиск..." oninput="filterChamps()">
         <div class="table-responsive">
-            <table class="table admin-table">
-                <thead><tr><th>Пользователь</th><th>Роль</th><th>Почта</th><th>Телефон</th><th>Активен</th><th>Действия</th></tr></thead>
+            <table class="table admin-table" id="champsTable">
+                <thead><tr><th>Название</th><th>Тип</th><th>Статус</th><th>Опубликован</th><th>Действия</th></tr></thead>
                 <tbody>
-                    {% for u in all_users %}
-                    <tr>
-                        <td>{{ u.full_name }}</td>
+                    {% for c in all_championships_full %}
+                    <tr data-search="{{ c.name|lower }}" class="champ-row" {% if forloop.counter > 5 %}style="display:none"{% endif %}>
+                        <td><strong>{{ c.name }}</strong></td>
+                        <td>{{ c.get_league_type_display }}</td>
+                        <td>{{ c.get_status_display }}</td>
+                        <td>{% if c.is_published %}✅{% else %}❌{% endif %}</td>
                         <td>
-                            <form method="post" action="{% url 'users:change_role' u.id %}" class="d-flex gap-1">
-                                {% csrf_token %}
-                                <select name="role" class="form-select form-select-sm" onchange="this.form.submit()">
-                                    {% for val, label in u.Role.choices %}
-                                        <option value="{{ val }}" {% if u.role == val %}selected{% endif %}>{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </form>
-                        </td>
-                        <td>{{ u.email }}</td>
-                        <td>{{ u.phone }}</td>
-                        <td>{% if u.is_active %}✅{% else %}❌{% endif %}</td>
-                        <td>
-                            <a href="{% url 'users:toggle_active' u.id %}" class="btn btn-sm btn-outline-warning">{% if u.is_active %}Заблокировать{% else %}Разблокировать{% endif %}</a>
-                            {% if u.avatar %}
-                                <a href="{% url 'users:remove_avatar' u.id %}" class="btn btn-sm btn-outline-danger">Удалить аватар</a>
-                            {% endif %}
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'leagues:detail' c.pk %}" class="btn btn-sm btn-outline-info">👁</a>
+                                {% if not c.is_published %}
+                                <a href="{% url 'users:publish_championship' c.pk %}" class="btn btn-sm btn-outline-success">🚀</a>
+                                {% endif %}
+				<a href="{% url 'leagues:championship_dashboard' c.pk %}" class="btn btn-sm btn-outline-warning" title="Управление">⚙️</a>
+                                <a href="{% url 'users:delete_championship' c.pk %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить чемпионат навсегда?')">🗑</a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        <div class="text-center mt-2">
+            <small class="section-subtitle" id="champCount">Показано: <span>5</span> из {{ all_championships_full|length }}</small>
+            <button class="btn btn-sm btn-outline-light mt-2" id="showMoreChamps" onclick="showMoreChamps()">Показать ещё</button>
+        </div>
     </div>
-    
-    <!-- АДМИН: НАЗНАЧЕНИЕ МОДЕРАТОРА -->
+    {% endif %}
+
+    <!-- НАЗНАЧИТЬ МОДЕРАТОРА -->
+    {% if user.role == 'ADMIN' %}
     <div class="panel-section mt-4">
         <h4>🛡️ Назначить модератора</h4>
         <form method="post" action="{% url 'users:assign_moderator' %}" class="row g-2">
             {% csrf_token %}
-            <div class="col-md-3">
-                <select name="user_id" class="form-select">
-                    {% for u in all_users %}<option value="{{ u.id }}">{{ u.full_name }}</option>{% endfor %}
+            <div class="col-md-5">
+                <select name="user_id" class="form-select searchable-select" required>
+                    <option value="">Выберите пользователя...</option>
+                    {% for u in all_users_full %}<option value="{{ u.id }}">{{ u.full_name }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
-                <select name="champ_id" class="form-select">
+            <div class="col-md-5">
+                <select name="champ_id" class="form-select searchable-select" required>
+                    <option value="">Выберите чемпионат...</option>
                     {% for c in championships %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="col-md-2"><label class="form-check"><input type="checkbox" name="can_teams" checked> Команды</label></div>
-            <div class="col-md-2"><label class="form-check"><input type="checkbox" name="can_matches" checked> Матчи</label></div>
-            <div class="col-md-2"><label class="form-check"><input type="checkbox" name="can_players" checked> Игроки</label></div>
-            <div class="col-md-2"><label class="form-check"><input type="checkbox" name="can_photos" checked> Фото</label></div>
             <div class="col-md-2"><button type="submit" class="btn btn-warning w-100">Назначить</button></div>
         </form>
     </div>
-    
-    <!-- АДМИН: НАЗНАЧЕНИЕ СТАТИСТА -->
+
+    <!-- НАЗНАЧИТЬ СТАТИСТА -->
     <div class="panel-section mt-4">
         <h4>📊 Назначить статиста</h4>
         <form method="post" action="{% url 'users:assign_statistician' %}" class="row g-2">
             {% csrf_token %}
-            <div class="col-md-4">
-                <select name="user_id" class="form-select">
-                    {% for u in all_users %}<option value="{{ u.id }}">{{ u.full_name }}</option>{% endfor %}
+            <div class="col-md-5">
+                <select name="user_id" class="form-select searchable-select" required>
+                    <option value="">Выберите пользователя...</option>
+                    {% for u in all_users_full %}<option value="{{ u.id }}">{{ u.full_name }}</option>{% endfor %}
                 </select>
             </div>
-            <div class="col-md-4">
-                <select name="match_id" class="form-select">
+            <div class="col-md-5">
+                <select name="match_id" class="form-select searchable-select" required>
+                    <option value="">Выберите матч...</option>
                     {% for m in matches %}<option value="{{ m.id }}">{{ m }}</option>{% endfor %}
                 </select>
             </div>
             <div class="col-md-2"><button type="submit" class="btn btn-warning w-100">Назначить</button></div>
         </form>
     </div>
-    
+
     <!-- ЖАЛОБЫ -->
     <div class="panel-section mt-4">
         <h4>🚨 Жалобы</h4>
         {% if reports %}
         <div class="table-responsive">
             <table class="table admin-table">
-                <thead><tr><th>От</th><th>На</th><th>Причина</th><th>Дата</th><th>Действие</th></tr></thead>
-                <tbody>
-                    {% for r in reports %}
-                    <tr>
-                        <td>{{ r.reporter.full_name }}</td>
-                        <td>{{ r.reported.full_name }}</td>
-                        <td>{{ r.reason|truncatechars:50 }}</td>
-                        <td>{{ r.created_at|date:"d.m.Y" }}</td>
-                        <td><a href="{% url 'users:resolve_report' r.id %}" class="btn btn-sm btn-success">Решена</a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
+                <thead><tr><th>От</th><th>На</th><th>Причина</th><th>Дата</th><th></th></tr></thead>
+                <tbody>{% for r in reports %}<tr><td>{{ r.reporter.full_name }}</td><td>{{ r.reported.full_name }}</td><td>{{ r.reason|truncatechars:50 }}</td><td>{{ r.created_at|date:"d.m.Y" }}</td><td><a href="{% url 'users:resolve_report' r.id %}" class="btn btn-sm btn-success">Решена</a></td></tr>{% endfor %}</tbody>
             </table>
         </div>
-        {% else %}<p>Жалоб нет.</p>{% endif %}
+        {% else %}<p class="section-subtitle">Жалоб нет.</p>{% endif %}
     </div>
     {% endif %}
-    
-    <!-- МОДЕРАТОР -->
-    {% if user.role == 'MODERATOR' %}
-    <div class="panel-section">
-        <h4>🏆 Мои чемпионаты</h4>
-        {% for champ in moderated_champs %}
-            <div class="card p-3 mb-2" style="background:var(--card-bg); border-left:5px solid {{ champ.primary_color }}">
-                <h5>{{ champ.name }}</h5>
-                <p>{{ champ.description|truncatechars:100 }}</p>
-                <a href="{% url 'leagues:detail' champ.pk %}" class="btn btn-outline-primary btn-sm">Перейти</a>
-            </div>
-        {% endfor %}
-    </div>
+
+        <!-- НАГРАДЫ -->
+    {% if user.role == 'MODERATOR' or user.role == 'ADMIN' %}
     <div class="panel-section mt-4">
-        <h4>📋 Последние матчи</h4>
-        <div class="table-responsive">
-            <table class="table admin-table">
-                <thead><tr><th>Дата</th><th>Матч</th><th>Счёт</th><th>Статус</th></tr></thead>
-                <tbody>
-                    {% for m in moderated_matches %}
-                    <tr>
-                        <td>{{ m.date_time|date:"d.m.Y" }}</td>
-                        <td>{{ m.team_home.name }} vs {{ m.team_away.name }}</td>
-                        <td>{{ m.score_home|default:'-' }}:{{ m.score_away|default:'-' }}</td>
-                        <td>{{ m.get_status_display }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>🏅 Награды турниров</h4>
+            <a href="{% url 'users:all_awards' %}" class="btn btn-sm btn-outline-warning">📋 Все награды</a>
         </div>
-    </div>
-    {% endif %}
-    
-    <!-- СУДЬЯ -->
-    {% if user.role == 'REFEREE' %}
-    <div class="panel-section">
-        <h4>📋 Все матчи</h4>
-        <div class="table-responsive">
-            <table class="table admin-table">
-                <thead><tr><th>Дата</th><th>Матч</th><th>Чемпионат</th><th>Счёт</th></tr></thead>
-                <tbody>
-                    {% for m in all_matches %}
-                    <tr>
-                        <td>{{ m.date_time|date:"d.m.Y H:i" }}</td>
-                        <td>{{ m.team_home.name }} vs {{ m.team_away.name }}</td>
-                        <td>{{ m.championship.short_name }}</td>
-                        <td>{{ m.score_home|default:'-' }}:{{ m.score_away|default:'-' }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endif %}
-    
-    <!-- СТАТИСТ -->
-    {% if user.role == 'STATISTICIAN' %}
-    <div class="panel-section">
-        <h4>📊 Мои назначения (активные)</h4>
-        {% if active_assignments %}
-            {% for a in active_assignments %}
-                <div class="card p-3 mb-2" style="background:var(--card-bg);">
-                    <strong>{{ a.match }}</strong><br>
-                    <small>Начало: {{ a.match.date_time|date:"d.m.Y H:i" }}</small><br>
-                    <small>Редактировать до: {{ a.can_edit_until|date:"d.m.Y H:i" }}</small><br>
-                    <a href="#" class="btn btn-warning btn-sm mt-2">Внести протокол</a>
+        
+        <!-- Превью награды -->
+        <div class="award-preview-wrapper">
+            <div class="award-preview-mini" id="awardPreview" style="display:none;">
+                <div class="award-card gold" id="previewCard">
+                    <div class="award-icon" id="previewIcon">🏅</div>
+                    <div class="award-info">
+                        <div class="award-name" id="previewName">Название</div>
+                        <div class="award-detail" id="previewDetail">Описание</div>
+                        <div class="award-footer">
+                            <span class="award-champ" id="previewChamp">Турнир</span>
+                            <span class="award-year" id="previewYear">2024</span>
+                        </div>
+                    </div>
                 </div>
-            {% endfor %}
-        {% else %}<p>Нет активных назначений.</p>{% endif %}
+            </div>
+        </div>
+        
+        <form method="post" action="{% url 'users:create_award' %}" class="row g-2" oninput="updatePreview()">
+            {% csrf_token %}
+            <div class="col-md-3">
+                <select name="champ_id" id="champSelect" class="form-select form-select-sm searchable-select">
+                    {% for c in championships %}<option value="{{ c.id }}" data-name="{{ c.name }}">{{ c.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3"><input type="text" name="name" id="awardName" class="form-control form-control-sm" placeholder="Название" required></div>
+            <div class="col-md-2"><input type="text" name="detail" id="awardDetail" class="form-control form-control-sm" placeholder="Описание"></div>
+            <div class="col-md-2">
+                <select name="color" id="awardColor" class="form-select form-select-sm">
+                    <option value="gold">Золото</option>
+                    <option value="silver">Серебро</option>
+                    <option value="bronze">Бронза</option>
+                    <option value="diamond">Бриллиант</option>
+                </select>
+            </div>
+            <div class="col-md-1"><input type="text" name="year" id="awardYear" class="form-control form-control-sm" placeholder="Год"></div>
+            <div class="col-md-1"><button type="submit" class="btn btn-warning btn-sm w-100">Создать</button></div>
+        </form>
+        
+        <!-- Выбор иконки -->
+        <div class="icon-picker mt-2">
+            <label class="form-label small mb-1">Выберите иконку:</label>
+            <div class="icon-grid">
+                {% for emoji in '🏅🥇🥈🥉🏆🎖⭐🌟💎🔥⚡🧱🎯👑🦾💯🎲📈🏐🏖🌳🤝🎉🎊🎂🏹💣🎸🚀⚽🎾🏀🎱🔮🎪🎭🎨'|make_list %}
+                <span class="icon-option" onclick="selectIcon('{{ emoji }}')">{{ emoji }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <input type="hidden" name="icon" id="awardIconHidden" value="🏅">
     </div>
-    <div class="panel-section mt-4">
-        <h4>📜 История назначений</h4>
+    {% endif %}
+
+    <!-- ПОЛЬЗОВАТЕЛИ -->
+    {% if user.role == 'ADMIN' %}
+    <div class="panel-section">
+        <h4>👥 Пользователи</h4>
+        <input type="text" class="form-control mb-3" placeholder="🔍 Мгновенный поиск по имени..." oninput="filterUsersInstant()">
         <div class="table-responsive">
-            <table class="table admin-table">
-                <thead><tr><th>Матч</th><th>Назначен</th></tr></thead>
+            <table class="table admin-table" id="usersTable">
+                <thead><tr><th>Пользователь</th><th>Роль</th><th>Активен</th><th>Действия</th></tr></thead>
                 <tbody>
-                    {% for a in my_assignments %}
-                    <tr><td>{{ a.match }}</td><td>{{ a.assigned_at|date:"d.m.Y" }}</td></tr>
+                    {% for u in all_users_full %}
+                    <tr data-search="{{ u.full_name|lower }}" class="user-row" {% if forloop.counter > 10 %}style="display:none"{% endif %}>
+                        <td>
+                            <strong>{{ u.full_name }}</strong>
+                            <button class="btn btn-sm btn-outline-info ms-2" onclick="toggleUserInfo('info{{ u.id }}')">ℹ️</button>
+                            <div id="info{{ u.id }}" class="user-info-popup" style="display:none;">
+                                <p>📧 {{ u.email }}</p>
+                                <p>📱 {{ u.phone|default:'—' }}</p>
+                                <p>🏙 {{ u.city|default:'—' }}</p>
+                                <p>🎂 {{ u.birth_date|default:'—' }}</p>
+                                <p>📅 Рег: {{ u.created_at|date:"d.m.Y" }}</p>
+                                <button class="btn btn-sm btn-outline-secondary mt-1" onclick="toggleUserInfo('info{{ u.id }}')">✕ Закрыть</button>
+                            </div>
+                        </td>
+                        <td>
+                            <form method="post" action="{% url 'users:change_role' u.id %}">
+                                {% csrf_token %}
+                                <select name="role" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    {% for val, label in u.Role.choices %}<option value="{{ val }}" {% if u.role == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                                </select>
+                            </form>
+                        </td>
+                        <td>{% if u.is_active %}✅{% else %}❌{% endif %}</td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'users:toggle_active' u.id %}" class="btn btn-sm btn-outline-warning">{% if u.is_active %}Блок{% else %}Разблок{% endif %}</a>
+                                <a href="/admin/users/user/{{ u.id }}/change/" class="btn btn-sm btn-outline-primary">✏️</a>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+        <div class="text-center mt-2">
+            <small class="section-subtitle" id="userCount">Показано: <span>10</span> из {{ all_users_full|length }}</small>
+            <button class="btn btn-sm btn-outline-light mt-2" id="showMoreBtn" onclick="showMoreUsers()">Показать ещё</button>
         </div>
     </div>
     {% endif %}
 </div>
+
+<script>
+
+// Поиск чемпионатов
+function filterChamps() {
+    const s = document.querySelector('#champsTable')?.parentElement.querySelector('input').value.toLowerCase();
+    if (!s) return;
+    let count = 0;
+    document.querySelectorAll('.champ-row').forEach(row => {
+        const text = row.dataset.search || row.textContent.toLowerCase();
+        const match = text.includes(s);
+        row.style.display = match ? '' : 'none';
+        if (match) count++;
+    });
+    document.getElementById('champCount').innerHTML = 'Показано: <span>' + count + '</span> из {{ all_championships_full|length }}';
+    document.getElementById('showMoreChamps').style.display = count > 5 ? 'inline-block' : 'none';
+}
+
+let champsVisible = 5;
+function showMoreChamps() {
+    champsVisible += 5; let shown = 0;
+    document.querySelectorAll('.champ-row').forEach(row => {
+        if (row.style.display !== 'none' && shown < champsVisible) { row.style.display = ''; shown++; }
+    });
+    document.getElementById('champCount').innerHTML = 'Показано: <span>' + shown + '</span> из {{ all_championships_full|length }}';
+    if (shown >= {{ all_championships_full|length }}) document.getElementById('showMoreChamps').style.display = 'none';
+}
+
+function toggleUserInfo(id){const e=document.getElementById(id);e.style.display=e.style.display==='none'?'block':'none'}
+
+let visibleCount = 10;
+function filterUsersInstant() {
+    const searchTerm = document.querySelector('input[placeholder*="поиск"]').value.toLowerCase();
+    let count = 0;
+    document.querySelectorAll('#usersTable tbody tr.user-row').forEach(row => {
+        const text = row.getAttribute('data-search') || row.textContent.toLowerCase();
+        const match = text.includes(searchTerm);
+        row.style.display = match ? '' : 'none';
+        if (match) count++;
+    });
+    visibleCount = count;
+    document.getElementById('userCount').innerHTML = 'Показано: <span>' + count + '</span> из {{ all_users_full|length }}';
+    document.getElementById('showMoreBtn').style.display = count > 10 ? 'inline-block' : 'none';
+}
+
+function showMoreUsers() {
+    visibleCount += 10;
+    let shown = 0;
+    document.querySelectorAll('#usersTable tbody tr.user-row').forEach(row => {
+        if (row.style.display !== 'none' && shown < visibleCount) {
+            row.style.display = '';
+            shown++;
+        }
+    });
+    document.getElementById('userCount').innerHTML = 'Показано: <span>' + shown + '</span> из {{ all_users_full|length }}';
+    if (shown >= {{ all_users_full|length }}) document.getElementById('showMoreBtn').style.display = 'none';
+}
+
+function selectIcon(emoji) {
+    document.getElementById('awardIconHidden').value = emoji;
+    document.getElementById('previewIcon').textContent = emoji;
+    document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
+    event.target.classList.add('selected');
+}
+
+function updatePreview() {
+    const name = document.getElementById('awardName').value || 'Название';
+    const detail = document.getElementById('awardDetail').value || 'Описание';
+    const icon = document.getElementById('awardIconHidden').value || '🏅';
+    const color = document.getElementById('awardColor').value;
+    const year = document.getElementById('awardYear').value || '2024';
+    const champSelect = document.getElementById('champSelect');
+    const champName = champSelect.options[champSelect.selectedIndex].dataset.name || 'Турнир';
+    
+    const preview = document.getElementById('awardPreview');
+    const card = document.getElementById('previewCard');
+    
+    if (name.trim()) {
+        preview.style.display = 'block';
+        document.getElementById('previewIcon').textContent = icon;
+        document.getElementById('previewName').textContent = name;
+        document.getElementById('previewDetail').textContent = detail;
+        document.getElementById('previewChamp').textContent = champName;
+        document.getElementById('previewYear').textContent = year;
+        card.className = 'award-card ' + color;
+    }
+}
+
+document.querySelectorAll('.searchable-select').forEach(select => {
+    const wrapper = document.createElement('div'); wrapper.className = 'searchable-select-wrapper';
+    select.parentNode.insertBefore(wrapper, select);
+    const input = document.createElement('input'); input.type = 'text'; input.className = 'form-control form-control-sm';
+    input.placeholder = select.options[0].textContent; wrapper.appendChild(input);
+    const dropdown = document.createElement('div'); dropdown.className = 'searchable-dropdown'; dropdown.style.display = 'none'; wrapper.appendChild(dropdown);
+    wrapper.appendChild(select); select.style.display = 'none';
+    function filterOptions(search) {
+        dropdown.innerHTML = '';
+        Array.from(select.options).forEach(opt => {
+            if (opt.value && opt.textContent.toLowerCase().includes(search.toLowerCase())) {
+                const div = document.createElement('div'); div.className = 'searchable-option'; div.textContent = opt.textContent;
+                div.addEventListener('click', () => { select.value = opt.value; input.value = opt.textContent; dropdown.style.display = 'none'; });
+                dropdown.appendChild(div);
+            }
+        });
+    }
+    input.addEventListener('focus', () => { filterOptions(''); dropdown.style.display = 'block'; });
+    input.addEventListener('input', () => filterOptions(input.value));
+    document.addEventListener('click', (e) => { if (!wrapper.contains(e.target)) dropdown.style.display = 'none'; });
+});
+</script>
 {% endblock %}

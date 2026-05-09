@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Мои команды{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>👥 Мои команды</h2>
+        <button class="btn btn-warning" onclick="toggleBlock('createTeamForm')">+ Создать команду</button>
+    </div>
+    
+    <!-- ФОРМА СОЗДАНИЯ -->
+    <div id="createTeamForm" class="popup-block mb-4" style="display:none; max-width:400px;">
+        <form method="post" action="{% url 'teams:create_team' %}">
+            {% csrf_token %}
+            <h5 class="mb-3">🆕 Новая команда</h5>
+            <div class="mb-3">
+                <label class="form-label">Название команды</label>
+                <input type="text" name="name" class="form-control" required placeholder="Введите название">
+            </div>
+            <div class="form-check mb-3">
+                <input type="checkbox" name="join_team" id="joinTeam" class="form-check-input" checked>
+                <label class="form-check-label" for="joinTeam">Добавить меня в состав команды</label>
+            </div>
+            <div id="playerFields">
+                <div class="mb-2">
+                    <label class="form-label">Игровой номер</label>
+                    <input type="number" name="number" class="form-control" value="1" min="1" max="99">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Амплуа</label>
+                    <select name="position" class="form-select">
+                        <option value="SETTER">Связующий</option>
+                        <option value="OUTSIDE_HITTER">Доигровщик</option>
+                        <option value="OPPOSITE">Диагональный</option>
+                        <option value="LIBERO">Либеро</option>
+                        <option value="MIDDLE_BLOCKER">Центральный блокирующий</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-warning w-100">Создать</button>
+            <button type="button" class="btn btn-outline-light w-100 mt-1" onclick="toggleBlock('createTeamForm')">Отмена</button>
+        </form>
+    </div>
+    
+    {% if my_teams %}
+        <div class="row g-3">
+            {% for team in my_teams %}
+            <div class="col-md-6">
+                <div class="card p-4" style="background:var(--card-bg); border-radius:16px; box-shadow:var(--shadow);">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        {% if team.logo %}
+                            <img src="{{ team.logo.url }}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;">
+                        {% else %}
+                            <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#1a73e8,#0d47a1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:white;">👥</div>
+                        {% endif %}
+                        <div>
+                            <h5 class="mb-0"><a href="{% url 'teams:team_detail' team.id %}" style="color:var(--text);text-decoration:none;">{{ team.name }}</a></h5>
+                            <small class="section-subtitle">Создана {{ team.created_at|date:"d.m.Y" }}</small>
+                        </div>
+                    </div>
+                    <p class="small">👤 Основатель: <strong>{{ team.founder.full_name|default:'—' }}</strong></p>
+                    <p class="small">👤 Капитан: <strong>{{ team.captain.full_name|default:'Не назначен' }}</strong></p>
+                    <p class="small">👥 Игроков: {{ team.players.count }}</p>
+                                        <div class="d-flex gap-2 mt-2">
+                        {% if team.founder == request.user %}
+                            <a href="{% url 'teams:edit_team' team.id %}" class="btn btn-sm btn-outline-success">✏️ Редактировать</a>
+                            <a href="{% url 'teams:delete_team' team.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить команду навсегда?')">🗑 Удалить</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div style="font-size:4rem;">👥</div>
+            <h4>Вы пока не состоите ни в одной команде</h4>
+            <p class="section-subtitle">Создайте свою команду или дождитесь приглашения</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleBlock(id){const e=document.getElementById(id);e.style.display=e.style.display==='none'?'block':'none'}
+document.getElementById('joinTeam')?.addEventListener('change', function() {
+    document.getElementById('playerFields').style.display = this.checked ? 'block' : 'none';
+});
+</script>
+{% endblock %}

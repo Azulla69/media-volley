@@ -1,12 +1,148 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
+{% load static %}
+
 {% block title %}Редактирование профиля{% endblock %}
 
 {% block content %}
-<h2>Редактировать профиль</h2>
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form|crispy }}
-    <button type="submit" class="btn btn-primary">Сохранить</button>
-</form>
+<div class="profile-edit-page">
+    <div class="container">
+        <div class="profile-edit-card">
+            <h3 class="mb-4">✏️ Редактирование профиля</h3>
+            
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- АВАТАР -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">📷 Аватар</label>
+                    <div class="avatar-edit-section">
+                        <!-- Текущий аватар -->
+                        <div id="currentAvatar">
+                            {% if user.avatar %}
+                                <img src="{{ user.avatar.url }}" class="current-avatar-img" alt="Текущий аватар">
+                            {% else %}
+                                <div class="current-avatar-placeholder">{{ user.first_name|first }}{{ user.last_name|first }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="avatar-upload">
+                            <!-- Загрузка своего -->
+                            <div class="mb-2">
+                                <input type="file" name="avatar" id="avatarUpload" accept="image/*" style="display:none;" onchange="previewAvatar(this)">
+                                <button type="button" class="btn btn-outline-light btn-sm" onclick="document.getElementById('avatarUpload').click()">
+                                    📁 Загрузить своё фото
+                                </button>
+                            </div>
+                            
+                            <!-- Галерея аватаров -->
+                            <p class="small section-subtitle mb-2">Или выберите из готовых:</p>
+                            <div class="avatar-gallery" id="avatarGallery">
+                                {% for avatar_file in avatar_list %}
+                                    <img src="{% static 'img/avatars/'|add:avatar_file %}" 
+                                         class="gallery-avatar {% if avatar_file in user.avatar.url %}selected{% endif %}" 
+                                         data-avatar="{{ avatar_file }}"
+                                         onclick="selectGalleryAvatar(this)"
+                                         alt="Аватар {{ forloop.counter }}">
+                                {% endfor %}
+                            </div>
+                            <input type="hidden" name="selected_avatar" id="selectedAvatar" value="">
+                        </div>
+                    </div>
+                </div>
+                
+                <hr style="border-color: var(--border);">
+                
+                <!-- ОСНОВНОЕ -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Имя</label>
+                        <input type="text" name="first_name" class="form-control" value="{{ user.first_name }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Фамилия</label>
+                        <input type="text" name="last_name" class="form-control" value="{{ user.last_name }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Город</label>
+                        <input type="text" name="city" class="form-control" value="{{ user.city|default:'' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Телефон</label>
+                        <input type="text" name="phone" class="form-control" value="{{ user.phone|default:'' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Рост (см)</label>
+                        <input type="number" name="height" class="form-control" value="{{ user.height|default:'' }}" min="130" max="230" placeholder="130-230">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Пол</label>
+                        <select name="gender" class="form-control">
+                            <option value="">Не указан</option>
+                            <option value="M" {% if user.gender == 'M' %}selected{% endif %}>Мужской</option>
+                            <option value="F" {% if user.gender == 'F' %}selected{% endif %}>Женский</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">О себе</label>
+                    <textarea name="bio" class="form-control" rows="3" maxlength="500">{{ user.bio|default:'' }}</textarea>
+                </div>
+                
+                <hr style="border-color: var(--border);">
+                
+                <!-- СОЦСЕТИ -->
+                <h5 class="mb-3">🔗 Социальные сети</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">ВКонтакте</label>
+                        <input type="url" name="vk_link" class="form-control" value="{{ user.vk_link|default:'' }}" placeholder="https://vk.com/...">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Telegram</label>
+                        <input type="url" name="tg_link" class="form-control" value="{{ user.tg_link|default:'' }}" placeholder="https://t.me/...">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Telegram-канал</label>
+                        <input type="url" name="tg_channel" class="form-control" value="{{ user.tg_channel|default:'' }}" placeholder="https://t.me/...">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Макс</label>
+                        <input type="url" name="max_link" class="form-control" value="{{ user.max_link|default:'' }}" placeholder="Ссылка на профиль">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-warning btn-lg w-100 mt-3 fw-bold">💾 Сохранить изменения</button>
+                <a href="{% url 'users:profile' %}" class="btn btn-outline-light w-100 mt-2">← Вернуться в профиль</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectGalleryAvatar(img) {
+    document.querySelectorAll('.gallery-avatar').forEach(a => a.classList.remove('selected'));
+    img.classList.add('selected');
+    document.getElementById('selectedAvatar').value = img.dataset.avatar;
+    
+    // Поменять большой аватар слева
+    const current = document.getElementById('currentAvatar');
+    current.innerHTML = '<img src="' + img.src + '" class="current-avatar-img" alt="Выбранный аватар">';
+}
+
+function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const current = document.getElementById('currentAvatar');
+            current.innerHTML = '<img src="' + e.target.result + '" class="current-avatar-img" alt="Preview">';
+            document.querySelectorAll('.gallery-avatar').forEach(a => a.classList.remove('selected'));
+            document.getElementById('selectedAvatar').value = '';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
 {% endblock %}

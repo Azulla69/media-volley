@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% block title %}Создать чемпионат{% endblock %}
+
+{% block content %}
+<div class="admin-panel-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🏆 Создать чемпионат</h2>
+        <a href="{% url 'users:admin_panel' %}" class="btn btn-outline-light btn-sm">← Назад</a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" onsubmit="return validateForm()" novalidate>
+        {% csrf_token %}
+        
+        <!-- ШАГ 0: ВЫБОР ФОРМАТА -->
+        <div class="form-step" id="step0">
+            <div class="panel-section text-center">
+                <h5 class="mb-4">📋 Выберите формат</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="card p-4 format-card" style="background:var(--card-bg); cursor:pointer;" onclick="selectFormat('applications', this)">
+                            <div class="format-icon">📝</div>
+                            <h6>Сбор заявок</h6>
+                            <p class="small">Команды подают заявки, вы их одобряете и создаёте расписание</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card p-4 format-card" style="background:var(--card-bg); cursor:pointer;" onclick="selectFormat('active', this)">
+                            <div class="format-icon">🏐</div>
+                            <h6>Уже идёт</h6>
+                            <p class="small">Чемпионат уже проходит, нужно добавить расписание и результаты</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card p-4 format-card" style="background:var(--card-bg); cursor:pointer;" onclick="selectFormat('finished', this)">
+                            <div class="format-icon">🏆</div>
+                            <h6>Завершён</h6>
+                            <p class="small">Чемпионат завершён, добавляем результаты и награды</p>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="stage" id="stageInput" value="">
+                <button type="button" class="btn btn-warning mt-4 next-step" data-next="1" id="formatNext" disabled>Далее →</button>
+            </div>
+        </div>
+        
+        <!-- ПРОГРЕСС -->
+        <div class="progress-steps mb-4" id="progressBar" style="display:none;">
+            <div class="step active" data-step="1"><div class="step-circle">1</div><span>Основное</span></div>
+            <div class="step-line"></div>
+            <div class="step" data-step="2"><div class="step-circle">2</div><span>Детали</span></div>
+            <div class="step-line"></div>
+            <div class="step" data-step="3"><div class="step-circle">3</div><span>Оформление</span></div>
+            <div class="step-line"></div>
+            <div class="step" data-step="4"><div class="step-circle">4</div><span>Награды</span></div>
+        </div>
+        
+        <!-- ШАГ 1: ОСНОВНОЕ -->
+        <div class="form-step" id="step1" style="display:none;">
+            <div class="panel-section">
+                <h5>📋 Шаг 1: Основная информация</h5>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Название чемпионата *</label>
+                        <input type="text" name="name" id="champName" class="form-control" required placeholder="Ночная волейбольная лига Хабаровска">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Короткое название</label>
+                        <input type="text" name="short_name" class="form-control" placeholder="НВЛ">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Тип волейбола *</label>
+                        <select name="league_type" class="form-select" required>
+                            <option value="">— Выберите —</option>
+                            <option value="CLASSIC">🏐 Классический</option>
+                            <option value="BEACH">🏖 Пляжный</option>
+                            <option value="PARK">🌳 Парковый</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Этап</label>
+                        <input type="text" id="stageDisplay" class="form-control" value="Выберите формат" disabled>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Описание *</label>
+                        <textarea name="description" id="champDesc" class="form-control" rows="4" required placeholder="Расскажите о турнире..."></textarea>
+                    </div>
+                </div>
+                <div class="text-end mt-3">
+                    <button type="button" class="btn btn-warning next-step" data-next="2">Далее →</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ШАГ 2: ДЕТАЛИ -->
+        <div class="form-step" id="step2" style="display:none;">
+            <div class="panel-section" id="step2Details">
+                <!-- Заполняется динамически -->
+            </div>
+            <div class="d-flex justify-content-between mt-3">
+                <button type="button" class="btn btn-outline-light prev-step" data-prev="1">← Назад</button>
+                <button type="button" class="btn btn-warning next-step" data-next="3">Далее →</button>
+            </div>
+        </div>
+        
+        <!-- ШАГ 3: ОФОРМЛЕНИЕ -->
+        <div class="form-step" id="step3" style="display:none;">
+            <div class="panel-section">
+                <h5>🎨 Шаг 3: Оформление</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Основной цвет</label>
+                        <input type="color" name="primary_color" class="form-control form-control-color" value="#1a73e8">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Вторичный цвет</label>
+                        <input type="color" name="secondary_color" class="form-control form-control-color" value="#ffffff">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <span class="color-preset" style="background:#1a73e8" onclick="setColors('#1a73e8','#ffffff')"></span>
+                            <span class="color-preset" style="background:#e83a1a" onclick="setColors('#e83a1a','#ffffff')"></span>
+                            <span class="color-preset" style="background:#f4a100" onclick="setColors('#f4a100','#ffffff')"></span>
+                            <span class="color-preset" style="background:#009688" onclick="setColors('#009688','#ffffff')"></span>
+                            <span class="color-preset" style="background:#7c4dff" onclick="setColors('#7c4dff','#ffffff')"></span>
+                            <span class="color-preset" style="background:#2e7d32" onclick="setColors('#2e7d32','#ffffff')"></span>
+                            <span class="color-preset" style="background:#1565c0" onclick="setColors('#1565c0','#ffffff')"></span>
+                            <span class="color-preset" style="background:#6a1b9a" onclick="setColors('#6a1b9a','#ffffff')"></span>
+                            <span class="color-preset" style="background:#bf360c" onclick="setColors('#bf360c','#ffffff')"></span>
+                            <span class="color-preset" style="background:#00695c" onclick="setColors('#00695c','#ffffff')"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6"><label class="form-label">Логотип</label><input type="file" name="logo" class="form-control" accept="image/*"></div>
+                    <div class="col-md-6"><label class="form-label">Telegram</label><input type="url" name="telegram_link" class="form-control" placeholder="https://t.me/..."></div>
+                    <div class="col-md-6"><label class="form-label">ВКонтакте</label><input type="url" name="vk_link" class="form-control" placeholder="https://vk.com/..."></div>
+                    <div class="col-md-6"><label class="form-label">Макс</label><input type="url" name="max_link" class="form-control" placeholder="Ссылка..."></div>
+                </div>
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" class="btn btn-outline-light prev-step" data-prev="2">← Назад</button>
+                    <button type="button" class="btn btn-warning next-step" data-next="4">Далее →</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ШАГ 4: НАГРАДЫ -->
+        <div class="form-step" id="step4" style="display:none;">
+            <div class="panel-section">
+                <h5>🏅 Шаг 4: Награды</h5>
+                <p class="section-subtitle">Базовые награды созданы автоматически. Вы можете редактировать или удалять их.</p>
+                
+                <div id="awardPreview" class="award-preview-wrapper mb-3" style="display:none;">
+                    <div class="award-preview-mini">
+                        <div class="award-card gold" id="previewCard">
+                            <div class="award-icon" id="previewIcon">🏅</div>
+                            <div class="award-info">
+                                <div class="award-name" id="previewName">Название</div>
+                                <div class="award-detail" id="previewDetail">Описание</div>
+                                <div class="award-footer">
+                                    <span class="award-champ" id="previewChamp">Турнир</span>
+                                    <span class="award-year" id="previewYear">2024</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="popup-block mb-3">
+                    <h6>➕ Новая награда</h6>
+                    <div class="row g-2">
+                        <div class="col-md-3"><input type="text" id="awardName" class="form-control form-control-sm" placeholder="Название" oninput="updatePreview()"></div>
+                        <div class="col-md-2"><input type="text" id="awardDetail" class="form-control form-control-sm" placeholder="Описание" oninput="updatePreview()"></div>
+                        <div class="col-md-1"><input type="text" id="awardIcon" class="form-control form-control-sm" value="🏅" oninput="updatePreview()"></div>
+                        <div class="col-md-2">
+                            <select id="awardColor" class="form-select form-select-sm" onchange="updatePreview()">
+                                <option value="gold">Золото</option><option value="silver">Серебро</option><option value="bronze">Бронза</option><option value="diamond">Бриллиант</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1"><input type="text" id="awardYear" class="form-control form-control-sm" placeholder="Год" oninput="updatePreview()"></div>
+                        <div class="col-md-2"><button type="button" class="btn btn-warning btn-sm w-100" onclick="saveAward()">Сохранить</button></div>
+                    </div>
+                    
+                    <div class="icon-picker mt-2">
+                        <label class="form-label small mb-1">Иконка:</label>
+                        <div class="icon-grid">
+                            {% for emoji in '🏅🥇🥈🥉🏆🎖⭐🌟💎🔥⚡🧱🎯👑🦾💯🎲📈🏐🏖🌳🤝🎉🎊🎂'|make_list %}
+                            <span class="icon-option" onclick="selectIcon('{{ emoji }}')">{{ emoji }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="savedAwards"></div>
+                <div id="awardsData"></div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-light prev-step" data-prev="3">← Назад</button>
+                    <button type="submit" class="btn btn-success btn-lg">🏆 Создать чемпионат</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Исправление бага datetime-local
+document.addEventListener('invalid', function(e) { e.preventDefault(); }, true);
+
+const stageNames = {'applications': 'Сбор заявок', 'active': 'Идёт', 'finished': 'Завершён'};
+
+function selectFormat(stage, card) {
+    document.querySelectorAll('.format-card').forEach(c => c.style.border = '2px solid transparent');
+    card.style.border = '2px solid #ffd700';
+    document.getElementById('stageInput').value = stage;
+    document.getElementById('stageDisplay').value = stageNames[stage];
+    document.getElementById('formatNext').disabled = false;
+    
+    const step2 = document.getElementById('step2Details');
+    if (stage === 'applications') {
+        step2.innerHTML = `
+            <h5>📝 Шаг 2: Детали турнира</h5>
+            <div class="row g-3">
+                <div class="col-12"><label class="form-label">Положение *</label><textarea name="regulations" class="form-control" rows="4" placeholder="Положение турнира..." required></textarea></div>
+                <div class="col-12"><label class="form-label">Информация об организаторах</label><textarea name="about_founders" class="form-control" rows="2" placeholder="Кто проводит турнир?"></textarea></div>
+                <div class="col-md-6"><label class="form-label">Дедлайн заявок *</label><input type="datetime-local" name="applications_deadline" id="deadlineInput" class="form-control" required></div>
+            </div>`;
+        setTimeout(() => {
+            const now = new Date(); now.setHours(now.getHours() + 24);
+            const dl = document.getElementById('deadlineInput');
+            if (dl) dl.setAttribute('min', now.toISOString().slice(0, 16));
+        }, 100);
+    } else {
+        step2.innerHTML = `
+            <h5>📝 Шаг 2: Детали турнира</h5>
+            <div class="row g-3">
+                <div class="col-12"><label class="form-label">Положение (необязательно)</label><textarea name="regulations" class="form-control" rows="3" placeholder="Положение турнира..."></textarea></div>
+                <div class="col-12"><label class="form-label">Информация об организаторах</label><textarea name="about_founders" class="form-control" rows="2" placeholder="Кто проводит турнир?"></textarea></div>
+                <p class="section-subtitle">ℹ️ Для формата «${stageNames[stage]}» сбор заявок не требуется. Вы сможете добавить команды и расписание в управлении чемпионатом.</p>
+            </div>`;
+    }
+}
+
+// Шаги
+document.querySelectorAll('.next-step').forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (this.id === 'formatNext') {
+            document.getElementById('step0').style.display = 'none';
+            document.getElementById('progressBar').style.display = 'flex';
+        }
+        const next = this.dataset.next;
+        document.querySelectorAll('.form-step').forEach(s => s.style.display = 'none');
+        document.getElementById('step' + next).style.display = 'block';
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active', 'done'));
+        document.querySelector('[data-step="' + next + '"]').classList.add('active');
+        for (let i = 1; i < next; i++) document.querySelector('[data-step="' + i + '"]').classList.add('done');
+    });
+});
+
+document.querySelectorAll('.prev-step').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const prev = this.dataset.prev;
+        document.querySelectorAll('.form-step').forEach(s => s.style.display = 'none');
+        document.getElementById('step' + prev).style.display = 'block';
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active', 'done'));
+        document.querySelector('[data-step="' + prev + '"]').classList.add('active');
+        for (let i = 1; i < prev; i++) document.querySelector('[data-step="' + i + '"]').classList.add('done');
+    });
+});
+
+function setColors(p, s) {
+    document.querySelector('input[name="primary_color"]').value = p;
+    document.querySelector('input[name="secondary_color"]').value = s;
+}
+
+function validateForm() {
+    if (!document.getElementById('stageInput')?.value) { alert('Выберите формат'); return false; }
+    if (!document.getElementById('champName')?.value.trim()) { alert('Введите название'); return false; }
+    if (!document.getElementById('champDesc')?.value.trim()) { alert('Введите описание'); return false; }
+    if (document.getElementById('stageInput').value === 'applications') {
+        if (!document.getElementById('deadlineInput')?.value) { alert('Введите дедлайн заявок'); return false; }
+        if (!document.querySelector('textarea[name="regulations"]')?.value.trim()) { alert('Введите положение'); return false; }
+    }
+    return true;
+}
+
+// Награды
+let savedAwards = []; let editIndex = -1;
+
+function initDefaultAwards() {
+    const defaults = [
+        {name: '1 место', detail: 'Победитель турнира', icon: '🥇', color: 'gold', year: ''},
+        {name: '2 место', detail: 'Серебряный призёр', icon: '🥈', color: 'silver', year: ''},
+        {name: '3 место', detail: 'Бронзовый призёр', icon: '🥉', color: 'bronze', year: ''},
+        {name: 'MVP', detail: 'Самый ценный игрок', icon: '⭐', color: 'diamond', year: ''},
+        {name: 'Лучший атакующий', detail: 'Больше всех очков атакой', icon: '⚡', color: 'gold', year: ''},
+        {name: 'Лучший защитник', detail: 'Больше всех очков блоком', icon: '🧱', color: 'gold', year: ''},
+        {name: 'Лучший подающий', detail: 'Больше всех очков подачей', icon: '🎯', color: 'gold', year: ''},
+    ];
+    savedAwards = [...defaults];
+    renderSavedAwards();
+}
+
+function updatePreview() {
+    const name = document.getElementById('awardName').value || 'Название';
+    const detail = document.getElementById('awardDetail').value || 'Описание';
+    const icon = document.getElementById('awardIcon').value || '🏅';
+    const color = document.getElementById('awardColor').value;
+    const year = document.getElementById('awardYear').value || '2024';
+    const champName = document.getElementById('champName')?.value || 'Турнир';
+    if (name.trim()) {
+        document.getElementById('awardPreview').style.display = 'flex';
+        document.getElementById('previewIcon').textContent = icon;
+        document.getElementById('previewName').textContent = name;
+        document.getElementById('previewDetail').textContent = detail;
+        document.getElementById('previewChamp').textContent = champName;
+        document.getElementById('previewYear').textContent = year;
+        document.getElementById('previewCard').className = 'award-card ' + color;
+    }
+}
+
+function selectIcon(emoji) {
+    document.getElementById('awardIcon').value = emoji;
+    document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
+    event.target.classList.add('selected');
+    updatePreview();
+}
+
+function saveAward() {
+    const name = document.getElementById('awardName').value.trim();
+    if (!name) { alert('Введите название'); return; }
+    const award = {name, detail: document.getElementById('awardDetail').value, icon: document.getElementById('awardIcon').value, color: document.getElementById('awardColor').value, year: document.getElementById('awardYear').value};
+    if (editIndex >= 0) { savedAwards[editIndex] = award; editIndex = -1; } else { savedAwards.push(award); }
+    document.getElementById('awardName').value = ''; document.getElementById('awardDetail').value = ''; document.getElementById('awardYear').value = '';
+    document.getElementById('awardPreview').style.display = 'none';
+    document.querySelector('.popup-block .btn-warning').textContent = 'Сохранить';
+    renderSavedAwards();
+}
+
+function editAward(i) { const a = savedAwards[i]; document.getElementById('awardName').value = a.name; document.getElementById('awardDetail').value = a.detail; document.getElementById('awardIcon').value = a.icon; document.getElementById('awardColor').value = a.color; document.getElementById('awardYear').value = a.year; editIndex = i; document.querySelector('.popup-block .btn-warning').textContent = 'Обновить'; updatePreview(); }
+function deleteAward(i) { if (confirm('Удалить?')) { savedAwards.splice(i, 1); renderSavedAwards(); } }
+
+function renderSavedAwards() {
+    document.getElementById('savedAwards').innerHTML = savedAwards.length === 0 ? '<p class="section-subtitle">Нет наград.</p>' : savedAwards.map((a, i) => `
+        <div class="award-card ${a.color} mb-2" style="display:flex;align-items:center;gap:14px;">
+            <span style="font-size:2rem;">${a.icon}</span>
+            <div style="flex:1;"><strong>${a.name}</strong><div class="small">${a.detail||''}</div></div>
+            <button type="button" class="btn btn-sm btn-outline-info" onclick="editAward(${i})">✏️</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAward(${i})">✕</button>
+        </div>`).join('');
+    document.getElementById('awardsData').innerHTML = savedAwards.map((a, i) => `
+        <input type="hidden" name="award_name_${i+1}" value="${a.name}">
+        <input type="hidden" name="award_detail_${i+1}" value="${a.detail}">
+        <input type="hidden" name="award_icon_${i+1}" value="${a.icon}">
+        <input type="hidden" name="award_color_${i+1}" value="${a.color}">
+        <input type="hidden" name="award_year_${i+1}" value="${a.year}">`).join('');
+}
+
+// Запустить автосоздание при загрузке
+initDefaultAwards();
+</script>
+{% endblock %}

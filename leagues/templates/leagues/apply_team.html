@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}Подать заявку{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2>📝 Подать заявку на «{{ championship.name }}»</h2>
+    <p class="section-subtitle">Максимум 14 игроков в заявке</p>
+
+    <form method="post" id="applyForm">
+        {% csrf_token %}
+        <!-- Шаг 1: Выбор команды -->
+        <div id="stepTeam" class="card p-4 mb-3" style="background:var(--card-bg); max-width:500px;">
+            <h5>👥 Выберите команду</h5>
+            <select name="team_id" id="teamSelect" class="form-select mb-3" required onchange="loadPlayers()">
+                <option value="">— Выберите команду —</option>
+                {% for t in user_teams %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+            </select>
+            <div id="playersBlock" style="display:none;"></div>
+        </div>
+        
+        <!-- Шаг 2: Игроки (появляется после выбора команды) -->
+        <div id="stepPlayers" style="display:none;">
+            <div class="card p-4 mb-3" style="background:var(--card-bg); max-width:700px;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>✅ Выберите игроков для заявки (<span id="selectedCount">0</span>/14, минимум 6)</h5>
+                    <button type="button" class="btn btn-sm btn-outline-light" onclick="selectAll()">Выбрать всех</button>
+                </div>
+                <div id="playersList"></div>
+                <button type="submit" class="btn btn-warning btn-lg w-100 mt-3 fw-bold">📝 Подать заявку</button>
+            </div>
+        </div>
+    </form>
+    
+    <a href="{% url 'leagues:detail' championship.pk %}" class="btn btn-outline-light">← Назад</a>
+</div>
+
+<script>
+// Данные игроков по командам (заполняются через data-атрибуты или загружаются динамически)
+const teamsData = {
+    {% for t in user_teams %}
+    "{{ t.id }}": [
+        {% for tp in t.players.all %}
+        {
+            id: {{ tp.player.id }},
+            name: "{{ tp.player.full_name|escapejs }}",
+            number: {{ tp.jersey_number }},
+            position: "{{ tp.get_position_display|escapejs }}",
+            isMain: {{ tp.is_main|lower }},
+            avatar: "{% if tp.player.avatar %}{{ tp.player.avatar.url }}{% endif %}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]{% if not forloop.last %},{% endif %}
+    {% endfor %}
+};
+
+function loadPlayers() {
+    const teamId = document.getElementById('teamSelect').value;
+    if (!teamId) {
+        document.getElementById('playersBlock').style.display = 'none';
+        document.getElementById('stepPlayers').style.display = 'none';
+        return;
+    }
+    
+    const players = teamsData[teamId] || [];
+    const mainPlayers = players.filter(p => p.isMain);
+    const benchPlayers = players.filter(p => !p.isMain);
+    
+    let html = '<h6 class="mt-3">⭐ Основной состав</h6>';
+    mainPlayers.forEach(p => {
+        html += `
+            <label class="d-flex align-items-center gap-2 mb-2 p-2 rounded" style="background:var(--bg);cursor:pointer;">
+                <input type="checkbox" name="players" value="${p.id}" class="form-check-input player-check" onchange="updateCount()" checked>
+                <span style="width:30px;height:30px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:0.7rem;">${p.name.charAt(0)}</span>
+                <span>${p.name}</span>
+                <small class="section-subtitle">#${p.number} • ${p.position}</small>
+            </label>`;
+    });
+    
+    if (benchPlayers.length > 0) {
+        html += '<h6 class="mt-3">🔄 Запасной состав</h6>';
+        benchPlayers.forEach(p => {
+            html += `
+                <label class="d-flex align-items-center gap-2 mb-2 p-2 rounded" style="background:var(--bg);cursor:pointer;">
+                    <input type="checkbox" name="players" value="${p.id}" class="form-check-input player-check" onchange="updateCount()">
+                    <span style="width:30px;height:30px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:0.7rem;">${p.name.charAt(0)}</span>
+                    <span>${p.name}</span>
+                    <small class="section-subtitle">#${p.number} • ${p.position}</small>
+                </label>`;
+        });
+    }
+    
+    document.getElementById('playersList').innerHTML = html;
+    document.getElementById('playersBlock').style.display = 'block';
+    document.getElementById('stepPlayers').style.display = 'block';
+    updateCount();
+}
+
+function updateCount() {
+    const count = document.querySelectorAll('.player-check:checked').length;
+    document.getElementById('selectedCount').textContent = count;
+}
+
+function selectAll() {
+    document.querySelectorAll('.player-check').forEach(cb => cb.checked = true);
+    updateCount();
+}
+
+// Валидация перед отправкой
+document.getElementById('applyForm').addEventListener('submit', function(e) {
+    const count = document.querySelectorAll('.player-check:checked').length;
+    if (count < 6) {
+        e.preventDefault();
+        alert('Минимум 6 игроков в заявке.');
+        return;
+    }
+    if (count > 14) {
+        e.preventDefault();
+        alert('Максимум 14 игроков в заявке.');
+        return;
+    }
+});
+</script>
+{% endblock %}

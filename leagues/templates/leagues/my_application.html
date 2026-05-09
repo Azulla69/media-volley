@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Моя заявка — {{ championship.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📝 Моя заявка: {{ championship.name }}</h2>
+        <a href="{% url 'leagues:detail' championship.pk %}" class="btn btn-outline-light btn-sm">← Назад</a>
+    </div>
+
+    <div class="card p-4" style="background:var(--card-bg); border-radius:16px; box-shadow:var(--shadow);">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>👥 {{ team.name }}</h5>
+            <button type="button" class="btn btn-warning btn-sm" id="editBtn" onclick="toggleEdit()">✏️ Редактировать</button>
+        </div>
+        
+        <form method="post" id="editForm" style="display:none;">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6>Выберите игроков (<span id="selectedCount">{{ selected_ids|length }}</span>/14, мин. 6)</h6>
+                <button type="button" class="btn btn-sm btn-outline-light" onclick="selectAll()">Выбрать всех</button>
+            </div>
+            <div id="playersList">
+                {% for tp in team.players.all %}
+                <label class="d-flex align-items-center gap-2 mb-2 p-2 rounded" style="background:var(--bg);cursor:pointer;">
+                    <input type="checkbox" name="players" value="{{ tp.player.id }}" class="form-check-input player-check" onchange="updateCount()"
+                           {% if tp.player.id in selected_ids %}checked{% endif %}>
+                    <span style="width:30px;height:30px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:0.7rem;">{{ tp.player.first_name|first }}{{ tp.player.last_name|first }}</span>
+                    <span>{{ tp.player.full_name }}</span>
+                    <small class="section-subtitle">#{{ tp.jersey_number }} • {{ tp.get_position_display }} • {% if tp.is_main %}⭐{% else %}🔄{% endif %}</small>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-warning">💾 Сохранить</button>
+                <button type="button" class="btn btn-outline-light" onclick="toggleEdit()">Отмена</button>
+            </div>
+        </form>
+        
+        <!-- ПРОСМОТР -->
+        <div id="viewMode">
+            <div class="table-responsive">
+                <table class="table admin-table">
+                    <thead><tr><th>#</th><th>Игрок</th><th>Амплуа</th><th>Состав</th></tr></thead>
+                    <tbody>
+                        {% for tp in team.players.all %}
+                            {% if tp.player.id in selected_ids %}
+                            <tr>
+                                <td>{{ tp.jersey_number }}</td>
+                                <td>{{ tp.player.full_name }}</td>
+                                <td>{{ tp.get_position_display }}</td>
+                                <td>{% if tp.is_main %}⭐ Основной{% else %}🔄 Запасной{% endif %}</td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleEdit() {
+    document.getElementById('viewMode').style.display = document.getElementById('viewMode').style.display === 'none' ? 'block' : 'none';
+    document.getElementById('editForm').style.display = document.getElementById('editForm').style.display === 'none' ? 'block' : 'none';
+    document.getElementById('editBtn').style.display = document.getElementById('editBtn').style.display === 'none' ? 'inline-block' : 'none';
+}
+
+function updateCount() {
+    document.getElementById('selectedCount').textContent = document.querySelectorAll('.player-check:checked').length;
+}
+
+function selectAll() {
+    document.querySelectorAll('.player-check').forEach(cb => cb.checked = true);
+    updateCount();
+}
+</script>
+{% endblock %}

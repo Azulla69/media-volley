@@ -1,29 +1,203 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}{{ championship.name }}{% endblock %}
 
 {% block content %}
-<h2>{{ championship.name }}</h2>
-<p>{{ championship.description }}</p>
-
-{% if photos %}
-<h3>Фотографии</h3>
-<div class="row">
-    {% for photo in photos %}
-        <div class="col-md-3 mb-3">
-            <img src="{{ photo.image.url }}" class="img-fluid" alt="{{ photo.caption }}">
+<div class="championship-page" style="--champ-color: {{ championship.primary_color }};">
+    
+    <!-- ШАПКА -->
+    <div class="champ-header" style="background: linear-gradient(135deg, {{ championship.primary_color }}, {{ championship.primary_color }}dd);">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-2 text-center">
+                    {% if championship.logo %}
+                        <img src="{{ championship.logo.url }}" class="champ-logo" alt="{{ championship.name }}">
+                    {% else %}
+                        <div class="champ-logo-placeholder">🏐</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-7">
+                    <h1 class="champ-name">{{ championship.name }}</h1>
+                    <div class="champ-meta">
+                        <span class="badge bg-light text-dark">{{ championship.get_league_type_display }}</span>
+                        <span class="badge ms-2 {% if championship.stage == 'active' %}bg-success{% elif championship.stage == 'finished' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">
+                            {{ championship.get_stage_display }}
+                        </span>
+                    </div>
+                    {% if championship.applications_deadline %}
+                        <p class="mt-2 small">⏰ Дедлайн заявок: {{ championship.applications_deadline|date:"d.m.Y H:i" }}</p>
+                    {% endif %}
+                </div>
+                                <div class="col-md-3 text-end">
+                    {% if user.is_authenticated and championship.stage == 'applications' %}
+                        {% if user_application %}
+                            <a href="{% url 'leagues:my_application' championship.pk %}" class="btn btn-outline-light btn-lg px-4 py-2 fw-bold">
+                                <span class="d-block" style="font-size:1.2rem;">📝</span>
+                                Моя заявка
+                            </a>
+                        {% else %}
+                            <a href="{% url 'leagues:apply_team' championship.pk %}" class="btn btn-warning btn-lg px-4 py-2 fw-bold shadow-sm" style="animation: pulse-btn 2s infinite;">
+                                <span class="d-block" style="font-size:1.2rem;">📝</span>
+                                Подать заявку
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                    {% if user.is_authenticated and user.role == 'ADMIN' or user.role == 'MODERATOR' %}
+                        <a href="{% url 'leagues:championship_dashboard' championship.pk %}" class="btn btn-outline-light btn-lg px-4 py-2 fw-bold ms-2">
+                            <span class="d-block" style="font-size:1.2rem;">⚙️</span>
+                            Управление
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-    {% endfor %}
+    </div>
+    
+    <!-- ВКЛАДКИ -->
+    <div class="champ-tabs">
+        <div class="container">
+            <a href="?tab=about" class="champ-tab {% if tab == 'about' %}active{% endif %}">📋 О турнире</a>
+            {% if championship.stage == 'applications' or championship.stage == 'review' %}
+                <a href="?tab=regulations" class="champ-tab {% if tab == 'regulations' %}active{% endif %}">📜 Положение</a>
+                <a href="?tab=awards" class="champ-tab {% if tab == 'awards' %}active{% endif %}">🏅 Награды</a>
+            {% endif %}
+            {% if championship.stage == 'active' or championship.stage == 'finished' %}
+                <a href="?tab=teams" class="champ-tab {% if tab == 'teams' %}active{% endif %}">👥 Команды</a>
+                <a href="?tab=schedule" class="champ-tab {% if tab == 'schedule' %}active{% endif %}">📅 Расписание</a>
+                <a href="?tab=table" class="champ-tab {% if tab == 'table' %}active{% endif %}">📊 Таблица</a>
+                <a href="?tab=photos" class="champ-tab {% if tab == 'photos' %}active{% endif %}">📸 Фото</a>
+                <a href="?tab=awards" class="champ-tab {% if tab == 'awards' %}active{% endif %}">🏅 Награды</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="container py-4">
+        <!-- О ТУРНИРЕ -->
+        {% if tab == 'about' %}
+        <div class="row">
+            <div class="col-md-8">
+                <h4>📋 О турнире</h4>
+                <p>{{ championship.description }}</p>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-3" style="background:var(--card-bg);">
+                    <h5>📱 Соцсети</h5>
+                    {% if championship.telegram_link %}<a href="{{ championship.telegram_link }}" class="btn btn-outline-primary btn-sm w-100 mb-2">Telegram</a>{% endif %}
+                    {% if championship.vk_link %}<a href="{{ championship.vk_link }}" class="btn btn-outline-primary btn-sm w-100 mb-2">ВКонтакте</a>{% endif %}
+                    {% if championship.max_link %}<a href="{{ championship.max_link }}" class="btn btn-outline-light btn-sm w-100">Макс</a>{% endif %}
+                    {% if not championship.telegram_link and not championship.vk_link and not championship.max_link %}
+                        <p class="section-subtitle">Соцсети не указаны</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- ПОЛОЖЕНИЕ -->
+        {% if tab == 'regulations' %}
+        <h4>📜 Положение</h4>
+        <div class="card p-4" style="background:var(--card-bg);">{{ championship.regulations|default:'Положение пока не добавлено.'|linebreaks }}</div>
+        {% endif %}
+        
+        
+        <!-- РАСПИСАНИЕ -->
+        {% if tab == 'schedule' and championship.stage == 'active' or championship.stage == 'finished' %}
+        <h4>📅 Расписание</h4>
+        <div class="table-responsive">
+            <table class="table match-table-all">
+                <thead><tr><th>Дата</th><th>Хозяева</th><th>Гости</th><th>Счёт</th><th>Статус</th></tr></thead>
+                <tbody>
+                    {% for m in matches %}
+                    <tr>
+                        <td>{{ m.date_time|date:"d.m.Y H:i" }}</td>
+                        <td>{{ m.team_home.name }}</td>
+                        <td>{{ m.team_away.name }}</td>
+                        <td>{% if m.score_home is not None %}{{ m.score_home }}:{{ m.score_away }}{% else %}—{% endif %}</td>
+                        <td>{{ m.get_status_display }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        <!-- КОМАНДЫ -->
+        {% if tab == 'teams' %}
+        <h4>👥 Команды</h4>
+        <div class="row g-3">
+            {% for app in applications %}
+            <div class="col-md-6">
+                <div class="card p-3" style="background:var(--card-bg);">
+                    <h5>{{ app.team.name }}{% if app.is_approved %} ✅{% endif %}</h5>
+                    <p class="small">Капитан: {{ app.team.captain.full_name|default:'—' }}</p>
+                    <a href="{% url 'teams:team_detail' app.team.id %}" class="btn btn-sm btn-outline-light">👁 Смотреть</a>
+                </div>
+            </div>
+            {% empty %}
+            <p class="section-subtitle">Нет заявок.</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- ТАБЛИЦА -->
+        {% if tab == 'table' %}
+        <h4>📊 Турнирная таблица</h4>
+        <div class="table-responsive">
+            <table class="table match-table-all">
+                <thead><tr><th>#</th><th>Команда</th><th>Игры</th><th>Победы</th><th>Поражения</th><th>Очки</th></tr></thead>
+                <tbody>
+                    {% for row in table %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><strong>{{ row.team.name }}</strong></td>
+                        <td>{{ row.played }}</td>
+                        <td>{{ row.won }}</td>
+                        <td>{{ row.lost }}</td>
+                        <td><strong>{{ row.points }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        <!-- ФОТО -->
+        {% if tab == 'photos' %}
+        <h4>📸 Фото</h4>
+        <div class="row g-3">
+            {% for photo in photos %}
+            <div class="col-md-3">
+                <img src="{{ photo.image.url }}" class="img-fluid rounded" alt="{{ photo.caption }}">
+                {% if photo.caption %}<p class="small text-center mt-1">{{ photo.caption }}</p>{% endif %}
+            </div>
+            {% empty %}
+            <p class="section-subtitle">Фотографий пока нет.</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- НАГРАДЫ -->
+        {% if tab == 'awards' %}
+        <h4>🏅 Награды</h4>
+        <div class="awards-grid">
+            {% for award in awards %}
+            <div class="award-card {{ award.color }}">
+                <div class="award-icon">{{ award.icon }}</div>
+                <div class="award-info">
+                    <div class="award-name">{{ award.name }}</div>
+                    <div class="award-detail">{{ award.detail }}</div>
+                    <div class="award-footer">
+                        {% for pa in award.players.all %}
+                            <span class="badge bg-secondary me-1">{{ pa.player.full_name }}</span>
+                        {% empty %}
+                            <span class="section-subtitle">Пока не вручена</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
 </div>
-{% endif %}
-
-<h3>Социальные сети</h3>
-{% if championship.telegram_link %}<a href="{{ championship.telegram_link }}" class="btn btn-info">Telegram</a>{% endif %}
-{% if championship.vk_link %}<a href="{{ championship.vk_link }}" class="btn btn-primary">ВКонтакте</a>{% endif %}
-
-<h3>Команды</h3>
-<ul>
-    {% for team in teams %}
-        <li>{{ team.name }} (Капитан: {{ team.captain|default:'не назначен' }})</li>
-    {% endfor %}
-</ul>
 {% endblock %}

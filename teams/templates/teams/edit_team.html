@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Редактировать команду{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>✏️ {{ team.name }}</h2>
+        <a href="{% url 'teams:my_teams' %}" class="btn btn-outline-light btn-sm">← Назад</a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card p-4 text-center" style="background:var(--card-bg); border-radius:16px; box-shadow:var(--shadow);">
+                    {% if team.logo %}
+                        <img src="{{ team.logo.url }}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin:0 auto 15px;">
+                    {% else %}
+                        <div style="width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#1a73e8,#0d47a1);display:flex;align-items:center;justify-content:center;font-size:3rem;color:white;margin:0 auto 15px;">👥</div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Название</label>
+                        <input type="text" name="name" class="form-control text-center" value="{{ team.name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Логотип</label>
+                        <input type="file" name="logo" class="form-control" accept="image/*">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">👤 Капитан</label>
+                        <select name="captain_id" class="form-select form-select-sm">
+                            <option value="">Не назначен</option>
+                            {% for tp in team.players.all %}
+                                <option value="{{ tp.player.id }}" {% if team.captain == tp.player %}selected{% endif %}>
+                                    {{ tp.player.full_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <p class="small section-subtitle">👤 Основатель: {{ team.founder.full_name }}</p>
+                    <p class="small section-subtitle">📅 Создана: {{ team.created_at|date:"d.m.Y" }}</p>
+                    
+                    <button type="submit" class="btn btn-warning w-100 mt-3">💾 Сохранить</button>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <!-- ОСНОВНОЙ СОСТАВ -->
+                <div class="card p-4 mb-4" style="background:var(--card-bg); border-radius:16px; box-shadow:var(--shadow);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">⭐ Основной состав</h5>
+                        <a href="{% url 'teams:invite_player' team.id %}" class="btn btn-sm btn-outline-success">📨 Пригласить</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table admin-table">
+                            <thead><tr><th>#</th><th>Игрок</th><th>Амплуа</th><th></th></tr></thead>
+                            <tbody>
+                                {% for tp in team.players.all %}
+                                {% if tp.is_main %}
+                                <tr>
+                                    <td><input type="number" name="player_{{ tp.player.id }}_number" class="form-control form-control-sm" value="{{ tp.jersey_number }}" style="width:60px;" min="1" max="99"></td>
+                                    <td>
+                                        {{ tp.player.full_name }}
+                                        {% if tp.player == team.captain %} <span class="badge bg-warning text-dark">Капитан</span>{% endif %}
+                                        {% if tp.player == team.founder %} <span class="badge bg-info">Основатель</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        <select name="player_{{ tp.player.id }}_position" class="form-select form-select-sm" style="width:180px;">
+                                            <option value="SETTER" {% if tp.position == 'SETTER' %}selected{% endif %}>Связующий</option>
+                                            <option value="OUTSIDE_HITTER" {% if tp.position == 'OUTSIDE_HITTER' %}selected{% endif %}>Доигровщик</option>
+                                            <option value="OPPOSITE" {% if tp.position == 'OPPOSITE' %}selected{% endif %}>Диагональный</option>
+                                            <option value="LIBERO" {% if tp.position == 'LIBERO' %}selected{% endif %}>Либеро</option>
+                                            <option value="MIDDLE_BLOCKER" {% if tp.position == 'MIDDLE_BLOCKER' %}selected{% endif %}>Центральный блокирующий</option>
+                                        </select>
+                                    </td>
+                                    <td class="d-flex gap-1">
+                                        <input type="hidden" name="player_{{ tp.player.id }}_is_main" value="on">
+                                        <a href="{% url 'teams:toggle_player' tp.id %}" class="btn btn-sm btn-outline-warning" title="В запас">⬇</a>
+                                        <a href="{% url 'teams:remove_player' team.id tp.player.id %}" class="btn btn-sm btn-outline-danger" title="Удалить" onclick="return confirm('Удалить игрока из команды?')">✕</a>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- ЗАПАСНОЙ СОСТАВ -->
+                <div class="card p-4" style="background:var(--card-bg); border-radius:16px; box-shadow:var(--shadow); opacity:0.8;">
+                    <h5 class="mb-3">🔄 Запасной состав</h5>
+                    <div class="table-responsive">
+                        <table class="table admin-table">
+                            <thead><tr><th>#</th><th>Игрок</th><th>Амплуа</th><th></th></tr></thead>
+                            <tbody>
+                                {% for tp in team.players.all %}
+                                {% if not tp.is_main %}
+                                <tr>
+                                    <td><input type="number" name="player_{{ tp.player.id }}_number" class="form-control form-control-sm" value="{{ tp.jersey_number }}" style="width:60px;" min="1" max="99"></td>
+                                    <td>
+                                        {{ tp.player.full_name }}
+                                        {% if tp.player == team.captain %} <span class="badge bg-warning text-dark">Капитан</span>{% endif %}
+                                        {% if tp.player == team.founder %} <span class="badge bg-info">Основатель</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        <select name="player_{{ tp.player.id }}_position" class="form-select form-select-sm" style="width:180px;">
+                                            <option value="SETTER" {% if tp.position == 'SETTER' %}selected{% endif %}>Связующий</option>
+                                            <option value="OUTSIDE_HITTER" {% if tp.position == 'OUTSIDE_HITTER' %}selected{% endif %}>Доигровщик</option>
+                                            <option value="OPPOSITE" {% if tp.position == 'OPPOSITE' %}selected{% endif %}>Диагональный</option>
+                                            <option value="LIBERO" {% if tp.position == 'LIBERO' %}selected{% endif %}>Либеро</option>
+                                            <option value="MIDDLE_BLOCKER" {% if tp.position == 'MIDDLE_BLOCKER' %}selected{% endif %}>Центральный блокирующий</option>
+                                        </select>
+                                    </td>
+                                    <td class="d-flex gap-1">
+                                        <input type="hidden" name="player_{{ tp.player.id }}_is_main" value="off">
+                                        <a href="{% url 'teams:toggle_player' tp.id %}" class="btn btn-sm btn-outline-info" title="В основу">⬆</a>
+                                        <a href="{% url 'teams:remove_player' team.id tp.player.id %}" class="btn btn-sm btn-outline-danger" title="Удалить" onclick="return confirm('Удалить игрока из команды?')">✕</a>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
