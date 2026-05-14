@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ match.team_home }} vs {{ match.team_away }} — {{ championship.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- НАВИГАЦИЯ -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <a href="{% url 'leagues:detail' championship.pk %}?tab=schedule" class="btn btn-outline-light btn-sm">← {{ championship.name }}</a>
+        {% if can_manage %}
+        <a href="{% url 'matches:match_manage' match.pk %}" class="btn btn-warning btn-sm">⚙️ Управление матчем</a>
+        {% endif %}
+    </div>
+
+    <!-- КАРТОЧКА МАТЧА -->
+    <div class="panel-section mb-4" style="background:linear-gradient(135deg,{{ championship.primary_color }}18,var(--card-bg)); border-top: 3px solid {{ championship.primary_color }};">
+
+        <div class="text-center mb-2">
+            <small class="section-subtitle">{{ match.date_time|date:"d E Y, H:i" }} &nbsp;·&nbsp; {{ match.location }}</small>
+        </div>
+
+        <!-- СТАТУС -->
+        <div class="text-center mb-3">
+            {% if match.status == 'LIVE' %}
+                <span class="badge bg-danger px-3 py-2" style="font-size:0.9rem;">🔴 LIVE</span>
+            {% elif match.status == 'FINISHED' %}
+                <span class="badge bg-secondary px-3 py-2" style="font-size:0.9rem;">✅ Завершён</span>
+            {% elif match.status == 'CANCELLED' %}
+                <span class="badge bg-dark px-3 py-2" style="font-size:0.9rem;">❌ Отменён</span>
+            {% else %}
+                <span class="badge bg-warning text-dark px-3 py-2" style="font-size:0.9rem;">📅 Запланирован</span>
+            {% endif %}
+        </div>
+
+        <!-- КОМАНДЫ И СЧЁТ -->
+        <div class="row align-items-center text-center g-3 py-2">
+            <!-- ХОЗЯЕВА -->
+            <div class="col-5">
+                <a href="{% url 'teams:team_detail' match.team_home.id %}" class="text-decoration-none">
+                    {% if match.team_home.logo %}
+                        <img src="{{ match.team_home.logo.url }}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin-bottom:10px;border:2px solid {{ championship.primary_color }}44;">
+                    {% else %}
+                        <div style="width:72px;height:72px;border-radius:50%;background:{{ championship.primary_color }}22;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 10px;">🏐</div>
+                    {% endif %}
+                    <div class="fw-bold" style="color:var(--text);font-size:1.05rem;{% if match.status == 'FINISHED' and match.score_home is not None and match.score_home > match.score_away %}color:{{ championship.primary_color }};{% endif %}">
+                        {{ match.team_home.name }}
+                    </div>
+                </a>
+                {% if match.status == 'FINISHED' or match.status == 'LIVE' %}
+                <div id="score-home" style="font-size:3.5rem;font-weight:900;line-height:1;margin-top:10px;color:{{ championship.primary_color }};">
+                    {{ match.score_home|default:"0" }}
+                </div>
+                <small class="section-subtitle">партий</small>
+                {% endif %}
+            </div>
+
+            <!-- ЦЕНТР -->
+            <div class="col-2">
+                {% if match.status == 'FINISHED' or match.status == 'LIVE' %}
+                    <div style="font-size:2rem;font-weight:700;color:var(--text-muted);">:</div>
+                {% else %}
+                    <div style="font-size:1.4rem;color:var(--text-muted);">vs</div>
+                {% endif %}
+            </div>
+
+            <!-- ГОСТИ -->
+            <div class="col-5">
+                <a href="{% url 'teams:team_detail' match.team_away.id %}" class="text-decoration-none">
+                    {% if match.team_away.logo %}
+                        <img src="{{ match.team_away.logo.url }}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin-bottom:10px;border:2px solid {{ championship.primary_color }}44;">
+                    {% else %}
+                        <div style="width:72px;height:72px;border-radius:50%;background:{{ championship.primary_color }}22;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 10px;">🏐</div>
+                    {% endif %}
+                    <div class="fw-bold" style="color:var(--text);font-size:1.05rem;{% if match.status == 'FINISHED' and match.score_away is not None and match.score_away > match.score_home %}color:{{ championship.primary_color }};{% endif %}">
+                        {{ match.team_away.name }}
+                    </div>
+                </a>
+                {% if match.status == 'FINISHED' or match.status == 'LIVE' %}
+                <div id="score-away" style="font-size:3.5rem;font-weight:900;line-height:1;margin-top:10px;color:{{ championship.primary_color }};">
+                    {{ match.score_away|default:"0" }}
+                </div>
+                <small class="section-subtitle">партий</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- СЧЁТ ПО ПАРТИЯМ -->
+        {% if sets %}
+        <div class="d-flex justify-content-center gap-2 flex-wrap mt-3 pb-1" id="sets-container">
+            {% for s in sets %}
+            <div class="text-center px-3 py-2 rounded" id="set-{{ s.set_number }}" style="background:var(--bg);min-width:70px;">
+                <div class="small section-subtitle mb-1">П{{ s.set_number }}</div>
+                <div class="fw-bold {% if s.score_home > s.score_away %}text-warning{% endif %}">{{ s.score_home }}</div>
+                <div style="height:1px;background:var(--border);margin:2px 0;"></div>
+                <div class="fw-bold {% if s.score_away > s.score_home %}text-warning{% endif %}">{{ s.score_away }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif match.status == 'LIVE' %}
+        <div id="sets-container" class="d-flex justify-content-center gap-2 flex-wrap mt-3 pb-1"></div>
+        {% endif %}
+
+        <!-- ССЫЛКИ: ТРАНСЛЯЦИЯ -->
+        {% if match.status == 'LIVE' and match.stream_link %}
+        <div class="text-center mt-3">
+            <a href="{{ match.stream_link }}" target="_blank" class="btn btn-danger btn-sm px-4">
+                🔴 Смотреть трансляцию
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- ССЫЛКИ: ЗАПИСЬ (FINISHED) -->
+        {% if match.status == 'FINISHED' %}
+        <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
+            {% if match.video_link %}
+            <a href="{{ match.video_link }}" target="_blank" class="btn btn-outline-light btn-sm">▶ Запись матча</a>
+            {% endif %}
+            {% if match.protocol_file %}
+            <a href="{{ match.protocol_file.url }}" target="_blank" class="btn btn-outline-light btn-sm">📄 Протокол</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- LIVE: автообновление счёта -->
+    {% if match.status == 'LIVE' %}
+    <div class="panel-section mb-4 text-center py-3">
+        <span class="badge bg-danger me-2">🔴 LIVE</span>
+        <small class="section-subtitle">Счёт обновляется автоматически каждые 15 секунд</small>
+    </div>
+    <script>
+    (function() {
+        function updateScore() {
+            fetch("{% url 'matches:match_detail' match.pk %}", {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(() => {
+                fetch("{% url 'matches:match_live_update' match.pk %}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+                    body: JSON.stringify({set_num: 0, score_home: 0, score_away: 0, _query_only: true})
+                }).catch(() => {});
+            }).catch(() => {});
+        }
+        // Простой polling через перезагрузку страницы
+        setTimeout(() => location.reload(), 15000);
+    })();
+    </script>
+    {% endif %}
+
+    <!-- СУДЬИ И СТАТИСТЫ -->
+    {% if referees or statisticians %}
+    <div class="panel-section mb-4">
+        <h6 class="mb-3">👔 Официальные лица</h6>
+        <div class="row g-3">
+            {% if referees %}
+            <div class="col-md-6">
+                <div class="small section-subtitle mb-2">Судьи</div>
+                {% for ref in referees %}
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-secondary">⚖️</span>
+                    <a href="{% url 'users:public_profile' ref.user.id %}" style="color:var(--text);text-decoration:none;font-size:0.9rem;">{{ ref.user.full_name }}</a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if statisticians %}
+            <div class="col-md-6">
+                <div class="small section-subtitle mb-2">Статисты</div>
+                {% for st in statisticians %}
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-secondary">📊</span>
+                    <a href="{% url 'users:public_profile' st.user.id %}" style="color:var(--text);text-decoration:none;font-size:0.9rem;">{{ st.user.full_name }}</a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ЗАЯВКИ: СОСТАВЫ КОМАНД -->
+    {% if match.status == 'SCHEDULED' or match.status == 'LIVE' %}
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="panel-section h-100">
+                <h6 class="mb-3">{{ match.team_home.name }}</h6>
+                {% if home_players %}
+                <div class="d-flex flex-column gap-1">
+                    {% for player in home_players %}
+                    <a href="{% url 'users:public_profile' player.id %}" class="d-flex align-items-center gap-2 py-1 text-decoration-none" style="color:var(--text);">
+                        {% if player.photo %}
+                        <img src="{{ player.photo.url }}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">
+                        {% else %}
+                        <div style="width:30px;height:30px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0;">👤</div>
+                        {% endif %}
+                        <span style="font-size:0.9rem;">{{ player.full_name }}</span>
+                        {% if player.position %}<span class="badge bg-secondary ms-auto" style="font-size:0.7rem;">{{ player.position }}</span>{% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="section-subtitle small">Состав не добавлен.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel-section h-100">
+                <h6 class="mb-3">{{ match.team_away.name }}</h6>
+                {% if away_players %}
+                <div class="d-flex flex-column gap-1">
+                    {% for player in away_players %}
+                    <a href="{% url 'users:public_profile' player.id %}" class="d-flex align-items-center gap-2 py-1 text-decoration-none" style="color:var(--text);">
+                        {% if player.photo %}
+                        <img src="{{ player.photo.url }}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">
+                        {% else %}
+                        <div style="width:30px;height:30px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0;">👤</div>
+                        {% endif %}
+                        <span style="font-size:0.9rem;">{{ player.full_name }}</span>
+                        {% if player.position %}<span class="badge bg-secondary ms-auto" style="font-size:0.7rem;">{{ player.position }}</span>{% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="section-subtitle small">Состав не добавлен.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ФИНАЛЬНЫЙ БЛОК: СТАТИСТИКА + НОМИНАЦИИ (FINISHED) -->
+    {% if match.status == 'FINISHED' %}
+
+    <!-- MVP -->
+    {% if match.mvp_home or match.mvp_away %}
+    <div class="panel-section mb-4">
+        <h6 class="mb-3">🏆 Номинации</h6>
+        <div class="row g-3">
+            {% if match.mvp_home %}
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3 p-2 rounded" style="background:{{ championship.primary_color }}11;border:1px solid {{ championship.primary_color }}33;">
+                    {% if match.mvp_home.photo %}
+                    <img src="{{ match.mvp_home.photo.url }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                    {% else %}
+                    <div style="width:40px;height:40px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;">👤</div>
+                    {% endif %}
+                    <div>
+                        <div class="small section-subtitle">MVP {{ match.team_home.name }}</div>
+                        <a href="{% url 'users:public_profile' match.mvp_home.id %}" style="color:{{ championship.primary_color }};font-weight:600;text-decoration:none;">{{ match.mvp_home.full_name }}</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if match.mvp_away %}
+            <div class="col-md-6">
+                <div class="d-flex align-items-center gap-3 p-2 rounded" style="background:{{ championship.primary_color }}11;border:1px solid {{ championship.primary_color }}33;">
+                    {% if match.mvp_away.photo %}
+                    <img src="{{ match.mvp_away.photo.url }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                    {% else %}
+                    <div style="width:40px;height:40px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;">👤</div>
+                    {% endif %}
+                    <div>
+                        <div class="small section-subtitle">MVP {{ match.team_away.name }}</div>
+                        <a href="{% url 'users:public_profile' match.mvp_away.id %}" style="color:{{ championship.primary_color }};font-weight:600;text-decoration:none;">{{ match.mvp_away.full_name }}</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ФОТО ПРОТОКОЛА -->
+    {% if match.protocol_photo %}
+    <div class="panel-section mb-4">
+        <h6 class="mb-3">📸 Фото протокола</h6>
+        <a href="{{ match.protocol_photo.url }}" target="_blank">
+            <img src="{{ match.protocol_photo.url }}" style="max-width:100%;border-radius:8px;border:1px solid var(--border);">
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- СТАТИСТИКА ИГРОКОВ -->
+    {% if has_stats %}
+    <h5 class="mb-3">📈 Статистика игроков</h5>
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="panel-section">
+                <h6 class="mb-3">{{ match.team_home.name }}</h6>
+                {% if home_players %}
+                <div class="table-responsive">
+                    <table class="table admin-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Игрок</th>
+                                <th class="text-center" title="Всего очков">О</th>
+                                <th class="text-center" title="Очки за атаку">ОЗ</th>
+                                <th class="text-center" title="Передачи">П</th>
+                                <th class="text-center" title="Очки за блок">ОБ</th>
+                                <th class="text-center" title="Очки за подачу">ОП</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in home_players %}
+                            {% if player.match_stat %}
+                            <tr>
+                                <td><a href="{% url 'users:public_profile' player.id %}" style="color:var(--text);text-decoration:none;">{{ player.full_name }}</a></td>
+                                <td class="text-center fw-bold" style="color:{{ championship.primary_color }};">{{ player.match_stat.total_points }}</td>
+                                <td class="text-center">{{ player.match_stat.points_attack }}</td>
+                                <td class="text-center">{{ player.match_stat.passes }}</td>
+                                <td class="text-center">{{ player.match_stat.points_block }}</td>
+                                <td class="text-center">{{ player.match_stat.points_serve }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="section-subtitle small">Игроки не добавлены в заявку.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="panel-section">
+                <h6 class="mb-3">{{ match.team_away.name }}</h6>
+                {% if away_players %}
+                <div class="table-responsive">
+                    <table class="table admin-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Игрок</th>
+                                <th class="text-center" title="Итого">О</th>
+                                <th class="text-center" title="Атака">ОЗ</th>
+                                <th class="text-center" title="Блок">ОБ</th>
+                                <th class="text-center" title="Подача">ОП</th>
+                                <th class="text-center" title="Эйсы">Эйс</th>
+                                <th class="text-center" title="Ошибки">Ош.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in away_players %}
+                            {% if player.match_stat %}
+                            <tr>
+                                <td><a href="{% url 'users:public_profile' player.id %}" style="color:var(--text);text-decoration:none;">{{ player.full_name }}</a></td>
+                                <td class="text-center fw-bold" style="color:{{ championship.primary_color }};">{{ player.match_stat.total_points }}</td>
+                                <td class="text-center">{{ player.match_stat.points_attack }}</td>
+                                <td class="text-center">{{ player.match_stat.points_block }}</td>
+                                <td class="text-center">{{ player.match_stat.points_serve }}</td>
+                                <td class="text-center">{{ player.match_stat.aces }}</td>
+                                <td class="text-center section-subtitle">{{ player.match_stat.errors }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="section-subtitle small">Игроки не добавлены в заявку.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="panel-section text-center py-4">
+        <div style="font-size:2rem;">📊</div>
+        <p class="section-subtitle mt-2">Статистика игроков не внесена.</p>
+    </div>
+    {% endif %}
+    {% endif %}{# end FINISHED #}
+
+    <!-- УВЕДОМЛЕНИЕ ДЛЯ СУДЬИ: ПРИНЯТЬ / ОТКЛОНИТЬ НАЗНАЧЕНИЕ -->
+    {% if pending_ref %}
+    <div class="panel-section mb-4" style="border:1px solid #ffc107;">
+        <h6>⚖️ Вас назначили судьёй на этот матч</h6>
+        <p class="section-subtitle small">Примите или отклоните назначение.</p>
+        <div class="d-flex gap-2">
+            <form method="post" action="{% url 'matches:accept_referee' pending_ref.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm">✅ Принять</button></form>
+            <form method="post" action="{% url 'matches:decline_referee' pending_ref.pk %}">{% csrf_token %}<button class="btn btn-outline-danger btn-sm">❌ Отклонить</button></form>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -48,6 +48,12 @@
                             Управление
                         </a>
                     {% endif %}
+                    {% if user.is_authenticated and user.role == 'ADMIN' %}
+                        <a href="{% url 'users:edit_championship' championship.pk %}" class="btn btn-outline-light btn-lg px-4 py-2 fw-bold ms-2">
+                            <span class="d-block" style="font-size:1.2rem;">✏️</span>
+                            Изменить
+                        </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -57,6 +63,7 @@
     <div class="champ-tabs">
         <div class="container">
             <a href="?tab=about" class="champ-tab {% if tab == 'about' %}active{% endif %}">📋 О турнире</a>
+            <a href="?tab=organizer" class="champ-tab {% if tab == 'organizer' %}active{% endif %}">👤 Организатор</a>
             {% if championship.stage == 'applications' or championship.stage == 'review' %}
                 <a href="?tab=regulations" class="champ-tab {% if tab == 'regulations' %}active{% endif %}">📜 Положение</a>
                 <a href="?tab=awards" class="champ-tab {% if tab == 'awards' %}active{% endif %}">🏅 Награды</a>
@@ -93,6 +100,116 @@
         </div>
         {% endif %}
         
+        <!-- ОРГАНИЗАТОР -->
+        {% if tab == 'organizer' %}
+        <h4>👤 Организатор</h4>
+
+        {% if user.is_authenticated and user.role == 'ADMIN' %}
+        <div class="card p-4 mb-4" style="background:var(--card-bg);">
+            <h6 class="mb-3">➕ Добавить организатора</h6>
+            <form method="post" action="{% url 'users:add_founder' championship.pk %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">Имя *</label>
+                        <input type="text" name="first_name" class="form-control form-control-sm" placeholder="Иван" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">Фамилия</label>
+                        <input type="text" name="last_name" class="form-control form-control-sm" placeholder="Петров">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">Фото</label>
+                        <input type="file" name="photo" class="form-control form-control-sm" accept="image/*">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-warning btn-sm w-100">Добавить</button>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small mb-1">Биография</label>
+                        <textarea name="bio" class="form-control form-control-sm" rows="2" placeholder="Краткая информация об организаторе..."></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if championship.about_founders %}
+        <div class="card p-4 mb-4" style="background:var(--card-bg);">{{ championship.about_founders|linebreaks }}</div>
+        {% endif %}
+
+        {% if founders %}
+        <div class="row g-3">
+            {% for founder in founders %}
+            <div class="col-md-4">
+                <div class="card p-3 text-center" style="background:var(--card-bg);">
+                    {% if founder.photo %}
+                        <img src="{{ founder.photo.url }}" class="rounded-circle mx-auto d-block mb-3" style="width:100px;height:100px;object-fit:cover;" alt="{{ founder.first_name }}">
+                    {% else %}
+                        <div class="rounded-circle mx-auto d-block mb-3" style="width:100px;height:100px;background:var(--accent,#1a73e8);display:flex;align-items:center;justify-content:center;font-size:2.5rem;">👤</div>
+                    {% endif %}
+                    <h5 class="mb-1">{{ founder.first_name }} {{ founder.last_name }}</h5>
+                    {% if founder.bio %}<p class="small section-subtitle">{{ founder.bio }}</p>{% endif %}
+                    {% if user.is_authenticated and user.role == 'ADMIN' %}
+                    <div class="d-flex gap-2 justify-content-center mt-2">
+                        <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#editFounder{{ founder.id }}">✏️ Изменить</button>
+                        <form method="post" action="{% url 'users:delete_founder' founder.id %}" onsubmit="return confirm('Удалить организатора?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">✕</button>
+                        </form>
+                    </div>
+
+                    <!-- Модалка редактирования -->
+                    <div class="modal fade" id="editFounder{{ founder.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content" style="background:var(--card-bg);">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title">Редактировать организатора</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="post" action="{% url 'users:edit_founder' founder.id %}" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            <div class="col-6">
+                                                <label class="form-label small">Имя</label>
+                                                <input type="text" name="first_name" class="form-control form-control-sm" value="{{ founder.first_name }}">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small">Фамилия</label>
+                                                <input type="text" name="last_name" class="form-control form-control-sm" value="{{ founder.last_name }}">
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small">Биография</label>
+                                                <textarea name="bio" class="form-control form-control-sm" rows="3">{{ founder.bio }}</textarea>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small">Новое фото</label>
+                                                <input type="file" name="photo" class="form-control form-control-sm" accept="image/*">
+                                                {% if founder.photo %}
+                                                <div class="mt-2 small section-subtitle">Текущее фото: <img src="{{ founder.photo.url }}" style="height:32px;width:32px;object-fit:cover;border-radius:50%;vertical-align:middle;"></div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer border-0">
+                                        <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Отмена</button>
+                                        <button type="submit" class="btn btn-warning btn-sm">Сохранить</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif not championship.about_founders %}
+        <p class="section-subtitle">Информация об организаторах не добавлена.</p>
+        {% endif %}
+        {% endif %}
+
         <!-- ПОЛОЖЕНИЕ -->
         {% if tab == 'regulations' %}
         <h4>📜 Положение</h4>
@@ -101,24 +218,74 @@
         
         
         <!-- РАСПИСАНИЕ -->
-        {% if tab == 'schedule' and championship.stage == 'active' or championship.stage == 'finished' %}
-        <h4>📅 Расписание</h4>
+        {% if tab == 'schedule' %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">📅 Расписание</h4>
+            <div class="btn-group btn-group-sm" id="scheduleFilter">
+                <button class="btn btn-outline-light active" onclick="filterMatches('all', this)">Все</button>
+                <button class="btn btn-outline-light" onclick="filterMatches('upcoming', this)">Предстоящие</button>
+                <button class="btn btn-outline-light" onclick="filterMatches('finished', this)">Сыгранные</button>
+            </div>
+        </div>
+        {% if matches %}
         <div class="table-responsive">
-            <table class="table match-table-all">
-                <thead><tr><th>Дата</th><th>Хозяева</th><th>Гости</th><th>Счёт</th><th>Статус</th></tr></thead>
+            <table class="table match-table-all" id="scheduleTable">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Хозяева</th>
+                        <th class="text-center">Счёт</th>
+                        <th>Гости</th>
+                        <th>Место</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
                 <tbody>
                     {% for m in matches %}
-                    <tr>
-                        <td>{{ m.date_time|date:"d.m.Y H:i" }}</td>
-                        <td>{{ m.team_home.name }}</td>
-                        <td>{{ m.team_away.name }}</td>
-                        <td>{% if m.score_home is not None %}{{ m.score_home }}:{{ m.score_away }}{% else %}—{% endif %}</td>
-                        <td>{{ m.get_status_display }}</td>
+                    <tr class="match-row" data-status="{{ m.status }}">
+                        <td class="text-nowrap">{{ m.date_time|date:"d.m H:i" }}</td>
+                        <td>
+                            <strong {% if m.status == 'FINISHED' and m.score_home is not None and m.score_home > m.score_away %}style="color:var(--champ-color)"{% endif %}>
+                                {{ m.team_home.name }}
+                            </strong>
+                        </td>
+                        <td class="text-center">
+                            {% if m.score_home is not None %}
+                                <span class="fw-bold">{{ m.score_home }}:{{ m.score_away }}</span>
+                                {% if m.sets.exists %}
+                                <div class="small section-subtitle text-nowrap">
+                                    {% for s in m.sets.all %}{{ s.score_home }}-{{ s.score_away }}{% if not forloop.last %} · {% endif %}{% endfor %}
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <span class="section-subtitle">—:—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong {% if m.status == 'FINISHED' and m.score_away is not None and m.score_away > m.score_home %}style="color:var(--champ-color)"{% endif %}>
+                                {{ m.team_away.name }}
+                            </strong>
+                        </td>
+                        <td class="small section-subtitle">{{ m.location }}</td>
+                        <td>
+                            {% if m.status == 'FINISHED' %}
+                                <a href="{% url 'matches:match_detail' m.pk %}" class="badge bg-success text-decoration-none">Сыгран →</a>
+                            {% elif m.status == 'LIVE' %}
+                                <a href="{% url 'matches:match_detail' m.pk %}" class="badge bg-danger text-decoration-none">🔴 Идёт →</a>
+                            {% elif m.status == 'CANCELLED' %}
+                                <span class="badge bg-secondary">Отменён</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">{{ m.date_time|date:"d.m" }}</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <p class="section-subtitle">Матчи ещё не добавлены.</p>
+        {% endif %}
         {% endif %}
         
         <!-- КОМАНДЫ -->
@@ -141,24 +308,53 @@
         
         <!-- ТАБЛИЦА -->
         {% if tab == 'table' %}
-        <h4>📊 Турнирная таблица</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">📊 Турнирная таблица</h4>
+            <small class="section-subtitle">3:0 / 3:1 = 3 очка · 3:2 = 2/1 очко</small>
+        </div>
+        {% if table %}
         <div class="table-responsive">
             <table class="table match-table-all">
-                <thead><tr><th>#</th><th>Команда</th><th>Игры</th><th>Победы</th><th>Поражения</th><th>Очки</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>Команда</th>
+                        <th class="text-center" title="Сыграно">И</th>
+                        <th class="text-center" title="Победы">В</th>
+                        <th class="text-center" title="Поражения">П</th>
+                        <th class="text-center" title="Партии">Партии</th>
+                        <th class="text-center" title="Очки"><strong>Очки</strong></th>
+                    </tr>
+                </thead>
                 <tbody>
                     {% for row in table %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
+                    <tr {% if forloop.counter == 1 %}style="background:rgba(255,215,0,.08);"
+                        {% elif forloop.counter == 2 %}style="background:rgba(192,192,192,.07);"
+                        {% elif forloop.counter == 3 %}style="background:rgba(205,127,50,.07);"{% endif %}>
+                        <td>
+                            {% if forloop.counter == 1 %}<span style="font-size:1.1rem;">🥇</span>
+                            {% elif forloop.counter == 2 %}<span style="font-size:1.1rem;">🥈</span>
+                            {% elif forloop.counter == 3 %}<span style="font-size:1.1rem;">🥉</span>
+                            {% else %}<span class="section-subtitle">{{ forloop.counter }}</span>{% endif %}
+                        </td>
                         <td><strong>{{ row.team.name }}</strong></td>
-                        <td>{{ row.played }}</td>
-                        <td>{{ row.won }}</td>
-                        <td>{{ row.lost }}</td>
-                        <td><strong>{{ row.points }}</strong></td>
+                        <td class="text-center">{{ row.played }}</td>
+                        <td class="text-center text-success">{{ row.won }}</td>
+                        <td class="text-center text-danger">{{ row.lost }}</td>
+                        <td class="text-center">
+                            <span>{{ row.sets_ratio }}</span>
+                        </td>
+                        <td class="text-center">
+                            <strong style="font-size:1.1rem;color:var(--champ-color);">{{ row.points }}</strong>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <p class="section-subtitle">Матчи ещё не сыграны.</p>
+        {% endif %}
         {% endif %}
         
         <!-- ФОТО -->
@@ -200,4 +396,19 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+function filterMatches(filter, btn) {
+    document.querySelectorAll('#scheduleFilter button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.match-row').forEach(row => {
+        const status = row.dataset.status;
+        let show = false;
+        if (filter === 'all') show = true;
+        else if (filter === 'upcoming') show = (status === 'SCHEDULED' || status === 'LIVE');
+        else if (filter === 'finished') show = (status === 'FINISHED' || status === 'CANCELLED');
+        row.style.display = show ? '' : 'none';
+    });
+}
+</script>
 {% endblock %}

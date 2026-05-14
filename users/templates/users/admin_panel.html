@@ -37,12 +37,13 @@
                         <td>{% if c.is_published %}✅{% else %}❌{% endif %}</td>
                         <td>
                             <div class="d-flex gap-1">
-                                <a href="{% url 'leagues:detail' c.pk %}" class="btn btn-sm btn-outline-info">👁</a>
+                                <a href="{% url 'leagues:detail' c.pk %}" class="btn btn-sm btn-outline-info" title="Просмотр">👁</a>
+                                <a href="{% url 'users:edit_championship' c.pk %}" class="btn btn-sm btn-outline-light" title="Редактировать">✏️</a>
                                 {% if not c.is_published %}
-                                <a href="{% url 'users:publish_championship' c.pk %}" class="btn btn-sm btn-outline-success">🚀</a>
+                                <a href="{% url 'users:publish_championship' c.pk %}" class="btn btn-sm btn-outline-success" title="Опубликовать">🚀</a>
                                 {% endif %}
-				<a href="{% url 'leagues:championship_dashboard' c.pk %}" class="btn btn-sm btn-outline-warning" title="Управление">⚙️</a>
-                                <a href="{% url 'users:delete_championship' c.pk %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить чемпионат навсегда?')">🗑</a>
+                                <a href="{% url 'leagues:championship_dashboard' c.pk %}" class="btn btn-sm btn-outline-warning" title="Управление">⚙️</a>
+                                <a href="{% url 'users:delete_championship' c.pk %}" class="btn btn-sm btn-outline-danger" title="Удалить" onclick="return confirm('Удалить чемпионат навсегда?')">🗑</a>
                             </div>
                         </td>
                     </tr>
@@ -117,10 +118,16 @@
         <!-- НАГРАДЫ -->
     {% if user.role == 'MODERATOR' or user.role == 'ADMIN' %}
     <div class="panel-section mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center">
             <h4>🏅 Награды турниров</h4>
-            <a href="{% url 'users:all_awards' %}" class="btn btn-sm btn-outline-warning">📋 Все награды</a>
+            <div class="d-flex gap-2">
+                <a href="{% url 'users:awards_page' %}" class="btn btn-sm btn-outline-light">🌐 Страница наград</a>
+                <a href="{% url 'users:all_awards' %}" class="btn btn-sm btn-warning">⚙️ Управление</a>
+            </div>
         </div>
+        <p class="section-subtitle small mt-2 mb-0">Создание, редактирование и выдача наград перенесены на отдельную страницу.</p>
+    </div>
+    {% if False %}
         
         <!-- Превью награды -->
         <div class="award-preview-wrapper">
@@ -221,6 +228,7 @@
             <button class="btn btn-sm btn-outline-light mt-2" id="showMoreBtn" onclick="showMoreUsers()">Показать ещё</button>
         </div>
     </div>
+    {% endif %}
     {% endif %}
 </div>
 

@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block title %}Результат — {{ match.team_home }} vs {{ match.team_away }}{% endblock %}
+
+{% block content %}
+<div class="admin-panel-page">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>📊 Ввод результата</h2>
+            <small class="section-subtitle">
+                <a href="{% url 'leagues:detail' championship.pk %}">{{ championship.name }}</a>
+            </small>
+        </div>
+        <a href="{% url 'leagues:championship_dashboard' championship.pk %}" class="btn btn-outline-light btn-sm">← Управление</a>
+    </div>
+
+    <!-- КАРТОЧКА МАТЧА -->
+    <div class="panel-section mb-4" style="background:linear-gradient(135deg,{{ championship.primary_color }}18,var(--card-bg));">
+        <div class="row align-items-center text-center g-2">
+            <div class="col-md-4">
+                <h4 class="mb-1">{{ match.team_home.name }}</h4>
+                <div style="font-size:3rem;font-weight:800;color:{{ championship.primary_color }};">
+                    {{ match.score_home|default:'—' }}
+                </div>
+                <small class="section-subtitle">партий</small>
+            </div>
+            <div class="col-md-4">
+                <div class="section-subtitle mb-2">{{ match.date_time|date:"d.m.Y H:i" }}</div>
+                <span class="badge px-3 py-2 {% if match.status == 'FINISHED' %}bg-success{% elif match.status == 'LIVE' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ match.get_status_display }}
+                </span>
+                <div class="small section-subtitle mt-1">{{ match.location }}</div>
+                {% if match.sets.exists %}
+                <div class="d-flex gap-1 justify-content-center flex-wrap mt-2">
+                    {% for s in match.sets.all %}
+                    <span class="badge bg-secondary">П{{ s.set_number }}: {{ s.score_home }}–{{ s.score_away }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <h4 class="mb-1">{{ match.team_away.name }}</h4>
+                <div style="font-size:3rem;font-weight:800;color:{{ championship.primary_color }};">
+                    {{ match.score_away|default:'—' }}
+                </div>
+                <small class="section-subtitle">партий</small>
+            </div>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="champ-tabs" style="position:static;border-bottom:2px solid var(--border);margin-bottom:24px;">
+            <a href="#" class="champ-tab active" onclick="switchTab('sets');return false;">🏐 Партии</a>
+            <a href="#" class="champ-tab" onclick="switchTab('stats');return false;">📈 Статистика игроков</a>
+        </div>
+
+        <!-- ПАРТИИ -->
+        <div class="result-panel" id="tab-sets">
+            <div class="panel-section">
+                <h5 class="mb-3">Счёт по партиям</h5>
+                <div class="table-responsive">
+                    <table class="table admin-table" style="max-width:480px;">
+                        <thead>
+                            <tr>
+                                <th>Партия</th>
+                                <th class="text-center">{{ match.team_home.name }}</th>
+                                <th></th>
+                                <th class="text-center">{{ match.team_away.name }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for set_obj in sets_list %}
+                            {% with forloop.counter as i %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ i }}</span></td>
+                                <td class="text-center">
+                                    <input type="number" name="set_{{ i }}_home" min="0" max="50"
+                                           class="form-control form-control-sm text-center"
+                                           style="width:65px;margin:auto;"
+                                           value="{{ set_obj.score_home|default:'' }}"
+                                           placeholder="—">
+                                </td>
+                                <td class="text-center align-middle" style="color:var(--text-muted);">–</td>
+                                <td class="text-center">
+                                    <input type="number" name="set_{{ i }}_away" min="0" max="50"
+                                           class="form-control form-control-sm text-center"
+                                           style="width:65px;margin:auto;"
+                                           value="{{ set_obj.score_away|default:'' }}"
+                                           placeholder="—">
+                                </td>
+                            </tr>
+                            {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="section-subtitle small mt-1">Пустые партии не учитываются. Победитель и счёт определяются автоматически.</p>
+                <div class="text-end mt-3">
+                    <button type="submit" class="btn btn-warning px-4">💾 Сохранить результат</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- СТАТИСТИКА -->
+        <div class="result-panel" id="tab-stats" style="display:none;">
+
+            {% for team_label, players in players_data %}
+            <div class="panel-section mb-4">
+                <h5 class="mb-3">{{ team_label }}</h5>
+                {% if players %}
+                <div class="table-responsive">
+                    <table class="table admin-table">
+                        <thead>
+                            <tr>
+                                <th>Игрок</th>
+                                <th class="text-center"><span title="Очки атакой">ОЗ</span></th>
+                                <th class="text-center"><span title="Очки блоком">ОБ</span></th>
+                                <th class="text-center"><span title="Очки подачей">ОП</span></th>
+                                <th class="text-center"><span title="Эйсы">Эйс</span></th>
+                                <th class="text-center"><span title="Блоки">Бл.</span></th>
+                                <th class="text-center"><span title="Ошибки">Ош.</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in players %}
+                            <tr>
+                                <td>{{ player.full_name }}</td>
+                                <td><input type="number" name="attack_{{ player.id }}" min="0" class="form-control form-control-sm text-center p-1" style="width:55px;" value="{{ player.match_stat.points_attack|default:0 }}"></td>
+                                <td><input type="number" name="block_{{ player.id }}" min="0" class="form-control form-control-sm text-center p-1" style="width:55px;" value="{{ player.match_stat.points_block|default:0 }}"></td>
+                                <td><input type="number" name="serve_{{ player.id }}" min="0" class="form-control form-control-sm text-center p-1" style="width:55px;" value="{{ player.match_stat.points_serve|default:0 }}"></td>
+                                <td><input type="number" name="aces_{{ player.id }}" min="0" class="form-control form-control-sm text-center p-1" style="width:55px;" value="{{ player.match_stat.aces|default:0 }}"></td>
+                                <td><input type="number" name="blocks_{{ player.id }}" min="0" class="form-control form-control-sm text-center p-1" style="width:55px;" value="{{ player.match_stat.blocks|default:0 }}"></td>
+                                <td><input type="number" name="errors_{{ player.id }}" min="0" class="form-control form-control-sm text-center p-1" style="width:55px;" value="{{ player.match_stat.errors|default:0 }}"></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="section-subtitle">Игроки не добавлены в заявку.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="text-end mt-2">
+                <button type="submit" class="btn btn-warning px-4">💾 Сохранить результат</button>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+function switchTab(tab) {
+    document.querySelectorAll('.result-panel').forEach(p => p.style.display = 'none');
+    document.getElementById('tab-' + tab).style.display = 'block';
+    document.querySelectorAll('.champ-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+}
+</script>
+{% endblock %}

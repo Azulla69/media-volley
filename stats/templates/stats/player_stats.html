@@ -1,12 +1,237 @@
 {% extends 'base.html' %}
-{% block title %}{{ player.full_name }} - Статистика{% endblock %}
+{% load static %}
+{% block title %}{{ player.full_name }} — Статистика{% endblock %}
 
 {% block content %}
-<h2>{{ player.full_name }}</h2>
+<div class="container py-4">
 
-<h3>Классический волейбол</h3>
-<p>ОЗ: {{ classic_stats.OZ|default:0 }} | ОБ: {{ classic_stats.OB|default:0 }} | ОП: {{ classic_stats.OP|default:0 }}</p>
+    <!-- ШАПКА ИГРОКА -->
+    <div class="panel-section mb-4" style="background:linear-gradient(135deg,var(--card-bg),var(--bg));">
+        <div class="row align-items-center g-3">
+            <div class="col-auto">
+                {% if player.avatar %}
+                    <img src="{{ player.avatar.url }}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--border);">
+                {% else %}
+                    <div style="width:80px;height:80px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;">{{ player.first_name|first }}{{ player.last_name|first }}</div>
+                {% endif %}
+            </div>
+            <div class="col">
+                <h3 class="mb-1">{{ player.full_name }}</h3>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if player.gender %}<span class="badge bg-secondary">{% if player.gender == 'M' %}♂ Мужской{% else %}♀ Женский{% endif %}</span>{% endif %}
+                    {% if player.city %}<span class="badge bg-secondary">📍 {{ player.city }}</span>{% endif %}
+                    <span class="badge bg-secondary">🏐 {{ total_matches }} матч{{ total_matches|pluralize:",,ей" }}</span>
+                </div>
+                {% if player.vk_link or player.tg_link %}
+                <div class="mt-2 d-flex gap-2">
+                    {% if player.vk_link %}<a href="{{ player.vk_link }}" class="badge bg-primary text-decoration-none" target="_blank">VK</a>{% endif %}
+                    {% if player.tg_link %}<a href="{{ player.tg_link }}" class="badge bg-info text-decoration-none" target="_blank">TG</a>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'users:public_profile' player.id %}" class="btn btn-outline-light btn-sm">👤 Профиль</a>
+            </div>
+        </div>
+    </div>
 
-<h3>Пляжный волейбол</h3>
-<p>ОЗ: {{ beach_stats.OZ|default:0 }} | ОБ: {{ beach_stats.OB|default:0 }} | ОП: {{ beach_stats.OP|default:0 }}</p>
+    <!-- ИТОГО -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-2">
+            <div class="panel-section text-center py-3">
+                <div style="font-size:2rem;font-weight:800;">{{ total_matches }}</div>
+                <div class="section-subtitle small">Матчей</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="panel-section text-center py-3">
+                <div style="font-size:2rem;font-weight:800;">{{ total.total|default:0 }}</div>
+                <div class="section-subtitle small">Всего очков</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="panel-section text-center py-3">
+                <div style="font-size:2rem;font-weight:800;">{{ total.attack|default:0 }}</div>
+                <div class="section-subtitle small">Атака (ОЗ)</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="panel-section text-center py-3">
+                <div style="font-size:2rem;font-weight:800;">{{ total.passes|default:0 }}</div>
+                <div class="section-subtitle small">Передачи (П)</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="panel-section text-center py-3">
+                <div style="font-size:2rem;font-weight:800;">{{ total.block|default:0 }}</div>
+                <div class="section-subtitle small">Блок (ОБ)</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="panel-section text-center py-3">
+                <div style="font-size:2rem;font-weight:800;">{{ total.serve|default:0 }}</div>
+                <div class="section-subtitle small">Подача (ОП)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+
+            <!-- ПО ТИПУ -->
+            <div class="panel-section mb-4">
+                <h5 class="mb-3">По типу волейбола</h5>
+                {% if classic_count %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>🏐 Классический <small class="section-subtitle">({{ classic_count }} матчей)</small></span>
+                        <strong>{{ classic_stats.total|default:0 }} О</strong>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="badge bg-secondary">ОЗ {{ classic_stats.attack|default:0 }}</span>
+                        <span class="badge bg-secondary">П {{ classic_stats.passes|default:0 }}</span>
+                        <span class="badge bg-secondary">ОБ {{ classic_stats.block|default:0 }}</span>
+                        <span class="badge bg-secondary">ОП {{ classic_stats.serve|default:0 }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% if beach_count %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>🏖 Пляжный <small class="section-subtitle">({{ beach_count }} матчей)</small></span>
+                        <strong>{{ beach_stats.total|default:0 }} О</strong>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="badge bg-secondary">ОЗ {{ beach_stats.attack|default:0 }}</span>
+                        <span class="badge bg-secondary">П {{ beach_stats.passes|default:0 }}</span>
+                        <span class="badge bg-secondary">ОБ {{ beach_stats.block|default:0 }}</span>
+                        <span class="badge bg-secondary">ОП {{ beach_stats.serve|default:0 }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% if park_count %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>🌳 Парковый <small class="section-subtitle">({{ park_count }} матчей)</small></span>
+                        <strong>{{ park_stats.total|default:0 }} О</strong>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="badge bg-secondary">ОЗ {{ park_stats.attack|default:0 }}</span>
+                        <span class="badge bg-secondary">П {{ park_stats.passes|default:0 }}</span>
+                        <span class="badge bg-secondary">ОБ {{ park_stats.block|default:0 }}</span>
+                        <span class="badge bg-secondary">ОП {{ park_stats.serve|default:0 }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% if not classic_count and not beach_count and not park_count %}
+                <p class="section-subtitle small">Нет данных</p>
+                {% endif %}
+            </div>
+
+            <!-- ЛУЧШИЙ МАТЧ -->
+            {% if best_match %}
+            <div class="panel-section mb-4">
+                <h5 class="mb-3">⭐ Лучший матч</h5>
+                <div class="small section-subtitle mb-1">{{ best_match.match.date_time|date:"d.m.Y" }} · {{ best_match.match.championship.short_name }}</div>
+                <div class="small mb-2">{{ best_match.match.team_home.name }} vs {{ best_match.match.team_away.name }}</div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge bg-warning text-dark">{{ best_match.pts }} очков</span>
+                    <span class="badge bg-secondary">ОЗ {{ best_match.points_attack }}</span>
+                    <span class="badge bg-secondary">ОБ {{ best_match.points_block }}</span>
+                    <span class="badge bg-secondary">ОП {{ best_match.points_serve }}</span>
+                </div>
+                <a href="{% url 'matches:match_detail' best_match.match.pk %}" class="btn btn-outline-light btn-sm mt-2">Матч →</a>
+            </div>
+            {% endif %}
+
+            <!-- ПО ЧЕМПИОНАТАМ -->
+            {% if champ_breakdown %}
+            <div class="panel-section">
+                <h5 class="mb-3">По чемпионатам</h5>
+                {% for cb in champ_breakdown %}
+                <div class="mb-3 pb-3" style="border-bottom:1px solid var(--border);">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <a href="{% url 'leagues:detail' cb.champ.pk %}" style="color:{{ cb.champ.primary_color }};font-weight:600;text-decoration:none;">{{ cb.champ.name }}</a>
+                            <div class="small section-subtitle">{{ cb.matches }} матч{{ cb.matches|pluralize:",,ей" }}</div>
+                        </div>
+                        <strong>{{ cb.total }}</strong>
+                    </div>
+                    <div class="d-flex gap-1 flex-wrap">
+                        <span class="badge bg-secondary" style="font-size:0.7rem;">ОЗ {{ cb.attack }}</span>
+                        <span class="badge bg-secondary" style="font-size:0.7rem;">П {{ cb.passes|default:0 }}</span>
+                        <span class="badge bg-secondary" style="font-size:0.7rem;">ОБ {{ cb.block }}</span>
+                        <span class="badge bg-secondary" style="font-size:0.7rem;">ОП {{ cb.serve }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- ИСТОРИЯ МАТЧЕЙ -->
+        <div class="col-lg-8">
+            <div class="panel-section">
+                <h5 class="mb-3">📋 История матчей</h5>
+                {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table admin-table">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Турнир</th>
+                                <th>Матч</th>
+                                <th class="text-center" title="Всего очков">О</th>
+                                <th class="text-center" title="Атака">ОЗ</th>
+                                <th class="text-center" title="Передачи">П</th>
+                                <th class="text-center" title="Блок">ОБ</th>
+                                <th class="text-center" title="Подача">ОП</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in page_obj %}
+                            <tr>
+                                <td class="text-nowrap small">{{ stat.match.date_time|date:"d.m.Y" }}</td>
+                                <td>
+                                    <span style="background:{{ stat.match.championship.primary_color }}22;color:{{ stat.match.championship.primary_color }};padding:2px 7px;border-radius:8px;font-size:0.75rem;white-space:nowrap;">
+                                        {{ stat.match.championship.short_name }}
+                                    </span>
+                                </td>
+                                <td class="small">
+                                    <a href="{% url 'matches:match_detail' stat.match.pk %}" style="color:var(--text);text-decoration:none;">
+                                        {{ stat.match.team_home.name }} vs {{ stat.match.team_away.name }}
+                                    </a>
+                                </td>
+                                <td class="text-center fw-bold">{{ stat.total_points }}</td>
+                                <td class="text-center">{{ stat.points_attack }}</td>
+                                <td class="text-center">{{ stat.passes }}</td>
+                                <td class="text-center">{{ stat.points_block }}</td>
+                                <td class="text-center">{{ stat.points_serve }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="8" class="text-center section-subtitle py-4">Нет данных</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if page_obj.paginator.num_pages > 1 %}
+                <div class="d-flex justify-content-center gap-1 mt-3">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-light">←</a>
+                    {% endif %}
+                    <span class="btn btn-sm btn-outline-secondary disabled">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-light">→</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="section-subtitle">Нет сыгранных матчей.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
 {% endblock %}

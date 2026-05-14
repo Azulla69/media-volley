@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Награды — Медиалига Волейбола{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>🏅 Награды</h2>
+            <p class="section-subtitle mb-0">Все награды чемпионатов Медиалиги</p>
+        </div>
+        {% if is_admin %}
+        <a href="{% url 'users:all_awards' %}" class="btn btn-warning btn-sm">⚙️ Управление</a>
+        {% endif %}
+    </div>
+
+    {% if champ_data %}
+    {% for cd in champ_data %}
+    <div class="panel-section mb-4" style="border-top:3px solid {{ cd.champ.primary_color }};">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            {% if cd.champ.logo %}
+            <img src="{{ cd.champ.logo.url }}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
+            {% endif %}
+            <div>
+                <a href="{% url 'leagues:detail' cd.champ.pk %}" style="color:{{ cd.champ.primary_color }};text-decoration:none;font-weight:700;font-size:1.1rem;">{{ cd.champ.name }}</a>
+                <div class="section-subtitle small">{{ cd.champ.get_league_type_display }}</div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            {% for award in cd.awards %}
+            <div class="col-md-6 col-lg-4">
+                <div class="award-card {{ award.color }} w-100" style="display:flex;">
+                    <div class="award-icon">{{ award.icon }}</div>
+                    <div class="award-info" style="flex:1;">
+                        <div class="award-name">{{ award.name }}</div>
+                        {% if award.detail %}<div class="award-detail">{{ award.detail }}</div>{% endif %}
+                        <div class="award-footer">
+                            {% if award.year %}<span class="award-year">{{ award.year }}</span>{% endif %}
+                        </div>
+                        {% if award.players.exists %}
+                        <div class="mt-1 d-flex flex-wrap gap-1">
+                            {% for pa in award.players.all %}
+                            <a href="{% url 'users:public_profile' pa.player.id %}" class="badge bg-secondary text-decoration-none" style="font-size:0.75rem;">
+                                {{ pa.player.full_name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="small section-subtitle mt-1">Пока не вручена</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="panel-section text-center py-5">
+        <div style="font-size:3rem;">🏅</div>
+        <h5 class="mt-3">Награды пока не созданы</h5>
+        <p class="section-subtitle">Администратор добавит их после завершения чемпионатов</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

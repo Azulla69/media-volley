@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Каталог команд — Медиалига Волейбола{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>👥 Команды</h2>
+            <p class="section-subtitle mb-0">{{ teams|length }} команд зарегистрировано</p>
+        </div>
+        {% if request.user.is_authenticated %}
+        <a href="{% url 'teams:my_teams' %}" class="btn btn-outline-light btn-sm">Мои команды</a>
+        {% endif %}
+    </div>
+
+    <!-- ПОИСК -->
+    <form method="get" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="🔍 Поиск по названию..." value="{{ search }}">
+            {% if search %}
+            <a href="{% url 'teams:catalog' %}" class="btn btn-outline-secondary">✕</a>
+            {% endif %}
+            <button type="submit" class="btn btn-warning">Найти</button>
+        </div>
+    </form>
+
+    {% if teams %}
+    <div class="row g-3">
+        {% for team in teams %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{% url 'teams:team_detail' team.id %}" class="text-decoration-none">
+                <div class="panel-section h-100" style="transition:transform 0.15s;cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        {% if team.logo %}
+                            <img src="{{ team.logo.url }}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">
+                        {% else %}
+                            <div style="width:52px;height:52px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">👥</div>
+                        {% endif %}
+                        <div style="min-width:0;">
+                            <div class="fw-bold" style="color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ team.name }}</div>
+                            <div class="section-subtitle small">
+                                {% if team.captain %}Капитан: {{ team.captain.full_name }}{% else %}Без капитана{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap mt-1">
+                        <span class="badge bg-secondary">{{ team.players.count }} игрок{{ team.players.count|pluralize:",,ов" }}</span>
+                        {% if team.founder %}
+                        <span class="badge" style="background:var(--border);color:var(--text-muted);font-size:0.75rem;">Основатель: {{ team.founder.first_name }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="panel-section text-center py-5">
+        <div style="font-size:3rem;">👥</div>
+        {% if search %}
+        <h5 class="mt-3">Ничего не найдено</h5>
+        <p class="section-subtitle">Попробуйте другой запрос</p>
+        <a href="{% url 'teams:catalog' %}" class="btn btn-outline-light btn-sm mt-2">Сбросить</a>
+        {% else %}
+        <h5 class="mt-3">Команд пока нет</h5>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

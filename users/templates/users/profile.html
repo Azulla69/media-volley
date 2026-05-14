@@ -47,7 +47,15 @@
                     {% endif %}
                     
                     <button class="btn btn-outline-secondary btn-sm mt-2" onclick="shareProfile()">🔗 Поделиться</button>
-                    {% if is_owner %}<a href="{% url 'users:profile_edit' %}" class="btn btn-outline-primary btn-sm mt-2">✏️ Редактировать</a>{% endif %}
+                    {% if is_owner %}
+                        <a href="{% url 'users:profile_edit' %}" class="btn btn-outline-primary btn-sm mt-2">✏️ Редактировать</a>
+                    {% elif request.user.is_authenticated %}
+                        <button class="btn btn-sm mt-2 {% if is_following %}btn-warning{% else %}btn-outline-warning{% endif %}"
+                                id="followBtn" onclick="toggleFollow()">
+                            {% if is_following %}✓ Подписан{% else %}+ Подписаться{% endif %}
+                        </button>
+                        <small class="section-subtitle d-block mt-1" id="followCount">{{ followers_count }} подписчик{{ followers_count|pluralize:",,ов" }}</small>
+                    {% endif %}
                     
                     <div class="match-calendar mt-3">
                         <h5 class="calendar-title">📅 {{ today|date:"F Y" }}</h5>
@@ -69,40 +77,52 @@
                 </div>
                 
                 <div class="stat-panel active" id="stats-total">
-                    <div class="text-center mb-4"><div class="total-matches">{{ total_matches }}</div><div class="section-subtitle">Всего матчей</div></div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ total_matches }}">0</div><div class="mini-stat-label">Всего матчей</div></div></div>
+                        <div class="col-6"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ total_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
+                    </div>
                     <div class="row g-3">
-                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ total_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ total_stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ total_stats.passes|default:0 }}">0</div><div class="mini-stat-label">П (передачи)</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ total_stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ total_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
                     </div>
                 </div>
                 
                 <div class="stat-panel" id="stats-classic">
-                    <div class="text-center mb-4"><div class="total-matches">{{ classic_matches }}</div><div class="section-subtitle">Матчей в классике</div></div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ classic_matches }}">0</div><div class="mini-stat-label">Матчей в классике</div></div></div>
+                        <div class="col-6"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ classic_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
+                    </div>
                     <div class="row g-3">
-                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ classic_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ classic_stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ classic_stats.passes|default:0 }}">0</div><div class="mini-stat-label">П (передачи)</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ classic_stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ classic_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
                     </div>
                 </div>
                 
                 <div class="stat-panel" id="stats-beach">
-                    <div class="text-center mb-4"><div class="total-matches">{{ beach_matches }}</div><div class="section-subtitle">Матчей в пляжке</div></div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ beach_matches }}">0</div><div class="mini-stat-label">Матчей в пляжке</div></div></div>
+                        <div class="col-6"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ beach_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
+                    </div>
                     <div class="row g-3">
-                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ beach_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ beach_stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ beach_stats.passes|default:0 }}">0</div><div class="mini-stat-label">П (передачи)</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ beach_stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ beach_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
                     </div>
                 </div>
                 
                 <div class="stat-panel" id="stats-park">
-                    <div class="text-center mb-4"><div class="total-matches">{{ park_matches }}</div><div class="section-subtitle">Матчей в парковом</div></div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ park_matches }}">0</div><div class="mini-stat-label">Матчей в парковом</div></div></div>
+                        <div class="col-6"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ park_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
+                    </div>
                     <div class="row g-3">
-                        <div class="col-6 col-md-3"><div class="mini-stat-card total-points"><div class="mini-stat-value count-up" data-target="{{ park_stats.total|default:0 }}">0</div><div class="mini-stat-label">Всего очков</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card attack"><div class="mini-stat-value count-up" data-target="{{ park_stats.attack|default:0 }}">0</div><div class="mini-stat-label">ОЗ (атака)</div></div></div>
+                        <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ park_stats.passes|default:0 }}">0</div><div class="mini-stat-label">П (передачи)</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card block"><div class="mini-stat-value count-up" data-target="{{ park_stats.block|default:0 }}">0</div><div class="mini-stat-label">ОБ (блок)</div></div></div>
                         <div class="col-6 col-md-3"><div class="mini-stat-card serve"><div class="mini-stat-value count-up" data-target="{{ park_stats.serve|default:0 }}">0</div><div class="mini-stat-label">ОП (подача)</div></div></div>
                     </div>
@@ -274,6 +294,17 @@ function animateNumber(e){let t=+e.dataset.target,n=0;const o=t/40;const r=setIn
 document.querySelectorAll('#stats-total .count-up').forEach(e=>animateNumber(e));
 function shareProfile(){navigator.clipboard.writeText(window.location.href).then(()=>{alert('Ссылка скопирована!')})}
 
+function toggleFollow(){
+    const btn = document.getElementById('followBtn');
+    fetch('{% if player %}{% url "core:follow_player" player.id %}{% endif %}', {method:'POST', headers:{'X-CSRFToken':'{{ csrf_token }}'}})
+    .then(r=>r.json()).then(data=>{
+        if(data.ok){
+            if(data.action==='followed'){btn.textContent='✓ Подписан';btn.className='btn btn-sm mt-2 btn-warning';}
+            else{btn.textContent='+ Подписаться';btn.className='btn btn-sm mt-2 btn-outline-warning';}
+            document.getElementById('followCount').textContent=data.count+' подписчик';
+        }
+    });
+}
 function toggleAwards(){const b=document.getElementById('showAwardsBtn');const h=document.querySelectorAll('.extra-award');const v=h[0].style.display==='none';h.forEach(e=>e.style.display=v?'block':'none');b.textContent=v?'🏅 Скрыть':'🏅 Показать все награды ('+h.length+')'}
 
 function toggleAllMatches(){const b=document.getElementById('allMatches');const n=document.getElementById('showAllBtn');if(b.style.display==='none'){b.style.display='block';if(n)n.style.display='none'}else{b.style.display='none';if(n)n.style.display='block'}}

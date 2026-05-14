@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Статистика — {{ champ.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- НАВИГАЦИЯ -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <a href="{% url 'leagues:detail' champ.pk %}" class="btn btn-outline-light btn-sm">← {{ champ.name }}</a>
+        <a href="{% url 'stats:team_rankings' %}?champ={{ champ.pk }}" class="btn btn-outline-light btn-sm">🏆 Рейтинг команд</a>
+    </div>
+
+    <!-- ШАПКА -->
+    <div class="panel-section mb-4" style="border-top:3px solid {{ champ.primary_color }};background:linear-gradient(135deg,{{ champ.primary_color }}18,var(--card-bg));">
+        <div class="d-flex align-items-center gap-3">
+            {% if champ.logo %}
+            <img src="{{ champ.logo.url }}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">
+            {% endif %}
+            <div>
+                <h4 class="mb-0" style="color:{{ champ.primary_color }};">{{ champ.name }}</h4>
+                <div class="section-subtitle small">{{ champ.get_league_type_display }} · {{ matches_count }} матчей сыграно</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ТОП БОМБАРДИРЫ -->
+    <div class="panel-section mb-4">
+        <h5 class="mb-3">📈 Бомбардиры</h5>
+
+        {% if top_scorers %}
+        <div class="table-responsive">
+            <table class="table admin-table mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Игрок</th>
+                        <th class="text-center fw-bold" style="color:{{ champ.primary_color }};" title="Всего очков">О</th>
+                        <th class="text-center" title="Очки атакой">ОЗ</th>
+                        <th class="text-center" title="Очки блоком">ОБ</th>
+                        <th class="text-center" title="Очки подачей">ОП</th>
+                        <th class="text-center" title="Эйсы">Эйс</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in top_scorers %}
+                    <tr {% if forloop.counter <= 3 %}style="background:{{ champ.primary_color }}0d;"{% endif %}>
+                        <td class="section-subtitle" style="width:40px;">
+                            {% if forloop.counter == 1 %}🥇
+                            {% elif forloop.counter == 2 %}🥈
+                            {% elif forloop.counter == 3 %}🥉
+                            {% else %}{{ forloop.counter }}{% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'users:public_profile' p.id %}" class="d-flex align-items-center gap-2 text-decoration-none" style="color:var(--text);">
+                                {% if p.photo %}
+                                <img src="{{ p.photo.url }}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+                                {% else %}
+                                <div style="width:28px;height:28px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:0.75rem;flex-shrink:0;">👤</div>
+                                {% endif %}
+                                <span>{{ p.full_name }}</span>
+                            </a>
+                        </td>
+                        <td class="text-center fw-bold" style="color:{{ champ.primary_color }};">{{ p.total }}</td>
+                        <td class="text-center">{{ p.attack }}</td>
+                        <td class="text-center">{{ p.block }}</td>
+                        <td class="text-center">{{ p.serve }}</td>
+                        <td class="text-center">{{ p.aces_total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="small section-subtitle mt-2">О = ОЗ + ОБ + ОП (очки за атаку, блок, подачу)</div>
+
+        {% else %}
+        <div class="text-center py-4">
+            <div style="font-size:2.5rem;">📊</div>
+            <p class="section-subtitle mt-2">Статистика игроков не внесена.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

@@ -55,9 +55,16 @@
 
     <!-- ТАБЫ -->
     <div class="champ-tabs" style="position:static; border-bottom:2px solid var(--border); margin-bottom:20px;">
-        <div class="d-flex">
-            <a href="#" class="champ-tab active" onclick="switchTab('applications'); return false;">📋 Заявки</a>
-            <a href="#" class="champ-tab" onclick="switchTab('schedule'); return false;">📅 Расписание</a>
+        <div class="d-flex flex-wrap align-items-center justify-content-between w-100">
+            <div class="d-flex flex-wrap">
+                <a href="#" class="champ-tab active" onclick="switchTab('applications'); return false;">📋 Заявки</a>
+                <a href="#" class="champ-tab" onclick="switchTab('teams'); return false;">👥 Команды</a>
+                <a href="#" class="champ-tab" onclick="switchTab('schedule'); return false;">📅 Расписание</a>
+                <a href="#" class="champ-tab" onclick="switchTab('moderators'); return false;">🛡 Модераторы</a>
+            </div>
+            <a href="{% url 'leagues:export_pdf' championship.pk %}" class="btn btn-outline-light btn-sm me-2" style="white-space:nowrap;">
+                📄 Экспорт заявок PDF
+            </a>
         </div>
     </div>
 
@@ -89,18 +96,74 @@
         </div>
     </div>
 
+    <!-- КОМАНДЫ -->
+    <div class="tab-panel" id="tab-teams" style="display:none;">
+        {% if approved_teams %}
+        <div class="row g-3">
+            {% for app in approved_teams %}
+            <div class="col-md-6">
+                <div class="panel-section">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0">{{ app.team.name }}</h5>
+                        <a href="{% url 'teams:team_detail' app.team.id %}" class="btn btn-sm btn-outline-info" target="_blank">👁</a>
+                    </div>
+                    <p class="small section-subtitle mb-2">Капитан: {{ app.team.captain.full_name|default:'—' }} &nbsp;|&nbsp; Игроков в заявке: {{ app.players.count }}</p>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for player in app.players.all %}
+                        <span class="badge bg-secondary">{{ player.full_name }}</span>
+                        {% empty %}
+                        <span class="section-subtitle small">Игроки не добавлены</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="section-subtitle">Нет одобренных команд.</p>
+        {% endif %}
+    </div>
+
     <!-- РАСПИСАНИЕ -->
     <div class="tab-panel" id="tab-schedule" style="display:none;">
         <div class="row">
             <div class="col-md-5">
+                <!-- ГЕНЕРАТОР -->
+                <div class="panel-section mb-3">
+                    <h5>⚡ Генератор расписания</h5>
+                    <p class="section-subtitle small">Автоматически создаёт все матчи кругового турнира.</p>
+                    <form method="post" onsubmit="return confirm('Сгенерировать матчи для всех одобренных команд? Существующие матчи не удаляются.')">
+                        {% csrf_token %}<input type="hidden" name="action" value="generate_schedule">
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">Начальная дата и время *</label>
+                            <input type="datetime-local" name="base_date" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">Место проведения</label>
+                            <input type="text" name="location" class="form-control form-control-sm" value="Спорткомплекс">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">Интервал между матчами (часов)</label>
+                            <input type="number" name="slot_hours" class="form-control form-control-sm" value="2" min="1" max="72">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="double_round" id="doubleRound">
+                                <label class="form-check-label small" for="doubleRound">Двойной круговой (каждая пара играет дома и в гостях)</label>
+                            </div>
+                        </div>
+                        <button class="btn btn-warning btn-sm w-100">⚡ Сгенерировать</button>
+                    </form>
+                </div>
+
                 <div class="panel-section">
-                    <h5>➕ Новый матч</h5>
+                    <h5>➕ Добавить матч вручную</h5>
                     <form method="post">{% csrf_token %}<input type="hidden" name="action" value="create_match">
                         <div class="mb-2"><select name="team_home" class="form-select form-select-sm" required>{% for app in approved_teams %}<option value="{{ app.team.id }}">{{ app.team.name }}</option>{% endfor %}</select></div>
                         <div class="mb-2"><select name="team_away" class="form-select form-select-sm" required>{% for app in approved_teams %}<option value="{{ app.team.id }}">{{ app.team.name }}</option>{% endfor %}</select></div>
                         <div class="mb-2"><input type="datetime-local" name="date_time" class="form-control form-control-sm" required></div>
                         <div class="mb-3"><input type="text" name="location" class="form-control form-control-sm" value="Спорткомплекс"></div>
-                        <button class="btn btn-warning btn-sm w-100">Добавить</button>
+                        <button class="btn btn-outline-warning btn-sm w-100">Добавить</button>
                     </form>
                 </div>
             </div>
@@ -109,19 +172,104 @@
                     {% if matches %}
                     {% for m in matches %}
                     <div class="match-item p-3 mb-2 rounded" style="background:var(--bg);">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div><strong>{{ m.date_time|date:"d.m.Y H:i" }}</strong><br>{{ m.team_home.name }} vs {{ m.team_away.name }}<br><small class="section-subtitle">{{ m.location }}</small></div>
-                            <div class="d-flex align-items-center gap-2">
-                                {% if m.status == 'FINISHED' %}<span class="badge bg-success">{{ m.score_home }}:{{ m.score_away }}</span>
-                                {% else %}<form method="post" class="d-flex gap-1 align-items-center">{% csrf_token %}<input type="hidden" name="action" value="update_score"><input type="hidden" name="match_id" value="{{ m.id }}"><input type="number" name="score_home" class="form-control form-control-sm" style="width:50px;" value="{{ m.score_home|default:'' }}"><span>:</span><input type="number" name="score_away" class="form-control form-control-sm" style="width:50px;" value="{{ m.score_away|default:'' }}"><button class="btn btn-sm btn-success">✓</button></form>{% endif %}
-                                <button class="btn btn-sm btn-outline-info" onclick="toggleEditMatch({{ m.id }})">✏️</button>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <strong>{{ m.date_time|date:"d.m.Y H:i" }}</strong><br>
+                                {{ m.team_home.name }} vs {{ m.team_away.name }}<br>
+                                <small class="section-subtitle">{{ m.location }}</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 flex-wrap">
+                                {% if m.status == 'FINISHED' %}
+                                <span class="badge bg-success">{{ m.score_home }}:{{ m.score_away }}</span>
+                                {% endif %}
+                                <a href="{% url 'matches:match_manage' m.id %}" class="btn btn-sm btn-warning" title="Управление">⚙️</a>
+                                <button class="btn btn-sm btn-outline-info" onclick="toggleEditMatch({{ m.id }})" title="Редактировать">✏️</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="toggleStaff({{ m.id }})" title="Судьи/Статисты">👔</button>
                                 <form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete_match"><input type="hidden" name="match_id" value="{{ m.id }}"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить?')">✕</button></form>
                             </div>
                         </div>
+
+                        <!-- Текущие судьи и статисты -->
+                        {% if m.refs or m.stats %}
+                        <div class="mt-2 d-flex flex-wrap gap-1">
+                            {% for ref in m.refs %}
+                            <span class="badge bg-secondary">⚖️ {{ ref.user.full_name }}{% if ref.is_accepted %} ✓{% elif ref.is_accepted == False %} ✗{% else %} ?{% endif %}</span>
+                            {% endfor %}
+                            {% for st in m.stats %}
+                            <span class="badge" style="background:var(--border);color:var(--text);">📊 {{ st.user.full_name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Редактирование матча -->
                         <div id="editMatch{{ m.id }}" style="display:none;" class="mt-2">
                             <form method="post">{% csrf_token %}<input type="hidden" name="action" value="update_match"><input type="hidden" name="match_id" value="{{ m.id }}">
-                                <div class="row g-2"><div class="col-md-3"><input type="datetime-local" name="date_time" class="form-control form-control-sm" value="{{ m.date_time|date:'Y-m-d\TH:i' }}"></div><div class="col-md-3"><select name="team_home" class="form-select form-select-sm">{% for app in approved_teams %}<option value="{{ app.team.id }}" {% if app.team == m.team_home %}selected{% endif %}>{{ app.team.name }}</option>{% endfor %}</select></div><div class="col-md-3"><select name="team_away" class="form-select form-select-sm">{% for app in approved_teams %}<option value="{{ app.team.id }}" {% if app.team == m.team_away %}selected{% endif %}>{{ app.team.name }}</option>{% endfor %}</select></div><div class="col-md-2"><input type="text" name="location" class="form-control form-control-sm" value="{{ m.location }}"></div><div class="col-md-1"><button class="btn btn-sm btn-success">✓</button></div></div>
+                                <div class="row g-2">
+                                    <div class="col-md-3"><input type="datetime-local" name="date_time" class="form-control form-control-sm" value="{{ m.date_time|date:'Y-m-d\TH:i' }}"></div>
+                                    <div class="col-md-3"><select name="team_home" class="form-select form-select-sm">{% for app in approved_teams %}<option value="{{ app.team.id }}" {% if app.team == m.team_home %}selected{% endif %}>{{ app.team.name }}</option>{% endfor %}</select></div>
+                                    <div class="col-md-3"><select name="team_away" class="form-select form-select-sm">{% for app in approved_teams %}<option value="{{ app.team.id }}" {% if app.team == m.team_away %}selected{% endif %}>{{ app.team.name }}</option>{% endfor %}</select></div>
+                                    <div class="col-md-2"><input type="text" name="location" class="form-control form-control-sm" value="{{ m.location }}"></div>
+                                    <div class="col-md-1"><button class="btn btn-sm btn-success">✓</button></div>
+                                </div>
                             </form>
+                        </div>
+
+                        <!-- Назначение судей и статистов -->
+                        <div id="staff{{ m.id }}" style="display:none;" class="mt-2 p-2 rounded" style="background:var(--bg);">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="small section-subtitle mb-1 fw-bold">⚖️ Назначить судью</div>
+                                    <form method="post" class="d-flex gap-1">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="assign_referee">
+                                        <input type="hidden" name="match_id" value="{{ m.id }}">
+                                        <select name="user_id" class="form-select form-select-sm">
+                                            {% for u in referees_users %}
+                                            <option value="{{ u.id }}">{{ u.full_name }}</option>
+                                            {% empty %}
+                                            <option disabled>Нет судей</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button class="btn btn-sm btn-outline-light" {% if not referees_users %}disabled{% endif %}>+</button>
+                                    </form>
+                                    {% for ref in m.refs %}
+                                    <div class="d-flex align-items-center gap-1 mt-1">
+                                        <span class="small">{{ ref.user.full_name }} ({% if ref.is_accepted %}принял{% elif ref.is_accepted == False %}отказал{% else %}ожидает{% endif %})</span>
+                                        <form method="post" class="ms-auto">{% csrf_token %}
+                                            <input type="hidden" name="action" value="remove_referee">
+                                            <input type="hidden" name="ref_id" value="{{ ref.id }}">
+                                            <button class="btn btn-sm btn-outline-danger" style="padding:0 4px;font-size:0.75rem;">✕</button>
+                                        </form>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="small section-subtitle mb-1 fw-bold">📊 Назначить статиста</div>
+                                    <form method="post" class="d-flex gap-1">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="assign_statistician">
+                                        <input type="hidden" name="match_id" value="{{ m.id }}">
+                                        <select name="user_id" class="form-select form-select-sm">
+                                            {% for u in statisticians_users %}
+                                            <option value="{{ u.id }}">{{ u.full_name }}</option>
+                                            {% empty %}
+                                            <option disabled>Нет статистов</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button class="btn btn-sm btn-outline-light" {% if not statisticians_users %}disabled{% endif %}>+</button>
+                                    </form>
+                                    {% for st in m.stats %}
+                                    <div class="d-flex align-items-center gap-1 mt-1">
+                                        <span class="small">{{ st.user.full_name }}</span>
+                                        <form method="post" class="ms-auto">{% csrf_token %}
+                                            <input type="hidden" name="action" value="remove_statistician">
+                                            <input type="hidden" name="st_id" value="{{ st.id }}">
+                                            <button class="btn btn-sm btn-outline-danger" style="padding:0 4px;font-size:0.75rem;">✕</button>
+                                        </form>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
@@ -130,12 +278,54 @@
             </div>
         </div>
     </div>
+
+    <!-- МОДЕРАТОРЫ -->
+    <div class="tab-panel" id="tab-moderators" style="display:none;">
+        <div class="panel-section">
+            <h5 class="mb-3">🛡 Модераторы чемпионата</h5>
+            <p class="section-subtitle small mb-3">Модераторы имеют постоянный доступ к управлению матчами этого чемпионата.</p>
+
+            {% if champ_moderators %}
+            <div class="table-responsive mb-4">
+                <table class="table admin-table">
+                    <thead><tr><th>Пользователь</th><th>Роль</th><th></th></tr></thead>
+                    <tbody>
+                        {% for mod in champ_moderators %}
+                        <tr>
+                            <td><a href="{% url 'users:public_profile' mod.user.id %}" style="color:var(--text);">{{ mod.user.full_name }}</a></td>
+                            <td><span class="badge bg-secondary">{{ mod.user.get_role_display }}</span></td>
+                            <td>
+                                <form method="post">{% csrf_token %}
+                                    <input type="hidden" name="action" value="remove_moderator">
+                                    <input type="hidden" name="mod_id" value="{{ mod.id }}">
+                                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Снять модератора?')">✕ Убрать</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="section-subtitle mb-4">Модераторов нет.</p>
+            {% endif %}
+
+            <h6 class="mb-2">Добавить модератора по ID</h6>
+            <form method="post" class="d-flex gap-2" style="max-width:400px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_moderator">
+                <input type="number" name="user_id" class="form-control form-control-sm" placeholder="ID пользователя" required>
+                <button class="btn btn-warning btn-sm">+ Добавить</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
 function toggleBlock(id) { const el = document.getElementById(id); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
 function switchTab(tab) { document.querySelectorAll('.champ-tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none'); document.getElementById('tab-' + tab).style.display = 'block'; event.target.classList.add('active'); }
 function toggleEditMatch(id) { const el = document.getElementById('editMatch' + id); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
+function toggleStaff(id) { const el = document.getElementById('staff' + id); el.style.display = el.style.display === 'none' ? 'block' : 'none'; }
 function toggleAppInfo(id) { const el = document.getElementById(id); el.style.display = el.style.display === 'none' ? 'table-row' : 'none'; }
 </script>
 {% endblock %}

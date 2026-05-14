@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Управление матчем — {{ match.team_home }} vs {{ match.team_away }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- НАВИГАЦИЯ -->
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <a href="{% url 'matches:match_detail' match.pk %}" class="btn btn-outline-light btn-sm">← Страница матча</a>
+        <span class="badge {% if match.status == 'LIVE' %}bg-danger{% elif match.status == 'FINISHED' %}bg-secondary{% elif match.status == 'CANCELLED' %}bg-dark{% else %}bg-warning text-dark{% endif %} px-3 py-2">
+            {% if match.status == 'LIVE' %}🔴 LIVE{% elif match.status == 'FINISHED' %}✅ Завершён{% elif match.status == 'CANCELLED' %}❌ Отменён{% else %}📅 Запланирован{% endif %}
+        </span>
+    </div>
+
+    <!-- ЗАГОЛОВОК -->
+    <div class="panel-section mb-4" style="border-top:3px solid {{ championship.primary_color }};">
+        <h5 class="mb-1">{{ match.team_home.name }} vs {{ match.team_away.name }}</h5>
+        <div class="section-subtitle small">{{ match.date_time|date:"d E Y, H:i" }} · {{ match.location }} · {{ championship.name }}</div>
+    </div>
+
+    <!-- СООБЩЕНИЯ -->
+    {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'success' %}success{% elif message.tags == 'error' %}danger{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+
+    <!-- УПРАВЛЕНИЕ СТАТУСОМ -->
+    <div class="panel-section mb-4">
+        <h6 class="mb-3">🔄 Статус матча</h6>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if match.status == 'SCHEDULED' %}
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="set_live">
+                <button type="submit" class="btn btn-danger btn-sm">🔴 Начать матч (LIVE)</button>
+            </form>
+            {% endif %}
+            {% if match.status == 'LIVE' %}
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="set_scheduled">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">⏸ Вернуть в «Запланирован»</button>
+            </form>
+            {% endif %}
+            {% if match.status == 'FINISHED' %}
+            <form method="post">{% csrf_token %}
+                <input type="hidden" name="action" value="set_scheduled">
+                <button type="submit" class="btn btn-outline-warning btn-sm" onclick="return confirm('Сбросить результат и вернуть в «Запланирован»?')">↩ Сбросить результат</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- LIVE: УПРАВЛЕНИЕ СЧЁТОМ В РЕАЛЬНОМ ВРЕМЕНИ -->
+    {% if match.status == 'LIVE' %}
+    <div class="panel-section mb-4" style="border:2px solid #dc3545;">
+        <h6 class="mb-3">🔴 Счёт в реальном времени</h6>
+        <p class="section-subtitle small mb-3">Обновления отправляются сразу. Введите счёт нужной партии и нажмите «Сохранить».</p>
+
+        <div class="d-flex flex-wrap gap-3 mb-3">
+            {% for s in sets_list %}
+            <div class="text-center p-2 rounded" style="background:var(--bg);min-width:120px;">
+                <div class="small section-subtitle mb-2 fw-bold">Партия {{ forloop.counter }}</div>
+                <div class="d-flex align-items-center gap-2 justify-content-center">
+                    <input type="number" id="live_h_{{ forloop.counter }}" class="form-control text-center fw-bold"
+                        style="width:60px;font-size:1.3rem;" value="{% if s %}{{ s.score_home }}{% else %}0{% endif %}" min="0" max="99">
+                    <span style="font-size:1.2rem;color:var(--text-muted);">:</span>
+                    <input type="number" id="live_a_{{ forloop.counter }}" class="form-control text-center fw-bold"
+                        style="width:60px;font-size:1.3rem;" value="{% if s %}{{ s.score_away }}{% else %}0{% endif %}" min="0" max="99">
+                </div>
+                <button class="btn btn-warning btn-sm mt-2 w-100" onclick="sendLive({{ forloop.counter }})">💾 Сохранить</button>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="live-status" class="small section-subtitle mb-2"></div>
+
+        <div class="p-2 rounded text-center" style="background:var(--bg);">
+            <div class="small section-subtitle mb-1">Общий счёт (партий)</div>
+            <div class="d-flex justify-content-center align-items-center gap-3">
+                <span class="fw-bold" style="font-size:2rem;color:{{ championship.primary_color }};" id="total-home">{{ match.score_home|default:"0" }}</span>
+                <span style="color:var(--text-muted);font-size:1.5rem;">:</span>
+                <span class="fw-bold" style="font-size:2rem;color:{{ championship.primary_color }};" id="total-away">{{ match.score_away|default:"0" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const csrfToken = '{{ csrf_token }}';
+    const liveUrl = '{% url "matches:match_live_update" match.pk %}';
+
+    function sendLive(setNum) {
+        const h = parseInt(document.getElementById('live_h_' + setNum).value) || 0;
+        const a = parseInt(document.getElementById('live_a_' + setNum).value) || 0;
+        const status = document.getElementById('live-status');
+        status.textContent = '⏳ Сохранение...';
+        fetch(liveUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify({set_num: setNum, score_home: h, score_away: a})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                document.getElementById('total-home').textContent = data.score_home;
+                document.getElementById('total-away').textContent = data.score_away;
+                status.textContent = '✅ Сохранено!';
+                setTimeout(() => { status.textContent = ''; }, 3000);
+            } else {
+                status.textContent = '❌ ' + (data.error || 'Ошибка');
+            }
+        })
+        .catch(() => { status.textContent = '❌ Ошибка сети'; });
+    }
+    </script>
+    {% endif %}
+
+    <!-- РЕЗУЛЬТАТ ПО ПАРТИЯМ + СТАТИСТИКА (финальный ввод) -->
+    <div class="panel-section mb-4">
+        <h6 class="mb-3">📋 Результат матча (по партиям)</h6>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_result">
+
+            <div class="table-responsive mb-3">
+                <table class="table admin-table" style="max-width:480px;">
+                    <thead>
+                        <tr>
+                            <th>Партия</th>
+                            <th class="text-center">{{ match.team_home.name }}</th>
+                            <th class="text-center">{{ match.team_away.name }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in sets_list %}
+                        <tr>
+                            <td class="section-subtitle">Партия {{ forloop.counter }}</td>
+                            <td class="text-center">
+                                <input type="number" name="set_{{ forloop.counter }}_home" class="form-control text-center"
+                                    style="width:80px;margin:0 auto;" value="{% if s %}{{ s.score_home }}{% endif %}" min="0" max="99" placeholder="—">
+                            </td>
+                            <td class="text-center">
+                                <input type="number" name="set_{{ forloop.counter }}_away" class="form-control text-center"
+                                    style="width:80px;margin:0 auto;" value="{% if s %}{{ s.score_away }}{% endif %}" min="0" max="99" placeholder="—">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- СТАТИСТИКА ИГРОКОВ -->
+            <h6 class="mb-2 mt-4">📈 Статистика игроков</h6>
+            <p class="section-subtitle small mb-3">Заполните поля или оставьте пустыми. Матч будет помечен как завершённый.</p>
+
+            {% if home_players %}
+            <div class="mb-4">
+                <div class="fw-bold mb-2" style="color:{{ championship.primary_color }};">{{ match.team_home.name }}</div>
+                <div class="table-responsive">
+                    <table class="table admin-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Игрок</th>
+                                <th class="text-center" title="Очки за забитые атаки">ОЗ</th>
+                                <th class="text-center" title="Передачи">П</th>
+                                <th class="text-center" title="Очки за блоки">ОБ</th>
+                                <th class="text-center" title="Очки за подачи">ОП</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in home_players %}
+                            <tr>
+                                <td style="white-space:nowrap;font-size:0.9rem;">{{ player.full_name }}</td>
+                                <td><input type="number" name="attack_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.points_attack|default:'' }}" min="0" placeholder="0"></td>
+                                <td><input type="number" name="passes_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.passes|default:'' }}" min="0" placeholder="0"></td>
+                                <td><input type="number" name="block_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.points_block|default:'' }}" min="0" placeholder="0"></td>
+                                <td><input type="number" name="serve_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.points_serve|default:'' }}" min="0" placeholder="0"></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if away_players %}
+            <div class="mb-4">
+                <div class="fw-bold mb-2" style="color:{{ championship.primary_color }};">{{ match.team_away.name }}</div>
+                <div class="table-responsive">
+                    <table class="table admin-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Игрок</th>
+                                <th class="text-center" title="Очки атакой">ОЗ</th>
+                                <th class="text-center" title="Очки блоком">ОБ</th>
+                                <th class="text-center" title="Очки подачей">ОП</th>
+                                <th class="text-center">Эйсы</th>
+                                <th class="text-center">Блоки</th>
+                                <th class="text-center">Ошибки</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in away_players %}
+                            <tr>
+                                <td style="white-space:nowrap;font-size:0.9rem;">{{ player.full_name }}</td>
+                                <td><input type="number" name="attack_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.points_attack|default:'' }}" min="0" placeholder="0"></td>
+                                <td><input type="number" name="block_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.points_block|default:'' }}" min="0" placeholder="0"></td>
+                                <td><input type="number" name="serve_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.points_serve|default:'' }}" min="0" placeholder="0"></td>
+                                <td><input type="number" name="aces_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.aces|default:'' }}" min="0" placeholder="0"></td>
+                                <td><input type="number" name="blocks_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.blocks|default:'' }}" min="0" placeholder="0"></td>
+                                <td><input type="number" name="errors_{{ player.id }}" class="form-control form-control-sm text-center" style="width:58px;" value="{{ player.match_stat.errors|default:'' }}" min="0" placeholder="0"></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-success">✅ Сохранить результат и статистику</button>
+        </form>
+    </div>
+
+    <!-- НОМИНАЦИИ (MVP) -->
+    <div class="panel-section mb-4">
+        <h6 class="mb-3">🏆 Номинации MVP</h6>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_nominations">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small section-subtitle">MVP — {{ match.team_home.name }}</label>
+                    <select name="mvp_home" class="form-select">
+                        <option value="">— Не выбран —</option>
+                        {% for player in home_players %}
+                        <option value="{{ player.id }}" {% if match.mvp_home_id == player.id %}selected{% endif %}>{{ player.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small section-subtitle">MVP — {{ match.team_away.name }}</label>
+                    <select name="mvp_away" class="form-select">
+                        <option value="">— Не выбран —</option>
+                        {% for player in away_players %}
+                        <option value="{{ player.id }}" {% if match.mvp_away_id == player.id %}selected{% endif %}>{{ player.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-warning btn-sm mt-3">💾 Сохранить номинации</button>
+        </form>
+    </div>
+
+    <!-- ССЫЛКИ И ДОКУМЕНТЫ -->
+    <div class="panel-section mb-4">
+        <h6 class="mb-3">🔗 Ссылки и документы</h6>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_links">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small section-subtitle">Ссылка на трансляцию</label>
+                    <input type="url" name="stream_link" class="form-control" value="{{ match.stream_link }}" placeholder="https://...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small section-subtitle">Ссылка на запись матча</label>
+                    <input type="url" name="video_link" class="form-control" value="{{ match.video_link }}" placeholder="https://...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small section-subtitle">Протокол (PDF/DOC)</label>
+                    {% if match.protocol_file %}
+                    <div class="mb-1"><a href="{{ match.protocol_file.url }}" target="_blank" class="small text-warning">📄 Текущий файл</a></div>
+                    {% endif %}
+                    <input type="file" name="protocol_file" class="form-control" accept=".pdf,.doc,.docx">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small section-subtitle">Фото протокола</label>
+                    {% if match.protocol_photo %}
+                    <div class="mb-1"><img src="{{ match.protocol_photo.url }}" style="height:40px;border-radius:4px;border:1px solid var(--border);" alt="Фото протокола"></div>
+                    {% endif %}
+                    <input type="file" name="protocol_photo" class="form-control" accept="image/*">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-outline-light btn-sm mt-3">💾 Сохранить ссылки</button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

@@ -51,7 +51,9 @@
             <div class="step-line"></div>
             <div class="step" data-step="3"><div class="step-circle">3</div><span>Оформление</span></div>
             <div class="step-line"></div>
-            <div class="step" data-step="4"><div class="step-circle">4</div><span>Награды</span></div>
+            <div class="step" data-step="4"><div class="step-circle">4</div><span>Организатор</span></div>
+            <div class="step-line"></div>
+            <div class="step" data-step="5"><div class="step-circle">5</div><span>Награды</span></div>
         </div>
         
         <!-- ШАГ 1: ОСНОВНОЕ -->
@@ -140,11 +142,44 @@
                 </div>
             </div>
         </div>
-        
-        <!-- ШАГ 4: НАГРАДЫ -->
+
+        <!-- ШАГ 4: ОРГАНИЗАТОР -->
         <div class="form-step" id="step4" style="display:none;">
             <div class="panel-section">
-                <h5>🏅 Шаг 4: Награды</h5>
+                <h5>👤 Шаг 4: Организатор</h5>
+                <p class="section-subtitle">Добавьте общую информацию и карточки организаторов турнира.</p>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <label class="form-label">Общая информация об организаторах</label>
+                        <textarea name="about_founders" class="form-control" rows="3" placeholder="Кто проводит турнир? Расскажите об организации..."></textarea>
+                    </div>
+                </div>
+
+                <div class="popup-block mb-3">
+                    <h6>➕ Добавить организатора</h6>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4"><label class="form-label small mb-1">Имя</label><input type="text" id="founderFirstName" class="form-control form-control-sm" placeholder="Иван"></div>
+                        <div class="col-md-4"><label class="form-label small mb-1">Фамилия</label><input type="text" id="founderLastName" class="form-control form-control-sm" placeholder="Петров"></div>
+                        <div class="col-md-4 d-flex align-items-end"><button type="button" class="btn btn-warning btn-sm w-100" onclick="saveFounder()">Добавить</button></div>
+                        <div class="col-12"><label class="form-label small mb-1">Биография (необязательно)</label><textarea id="founderBio" class="form-control form-control-sm" rows="2" placeholder="Краткая информация..."></textarea></div>
+                    </div>
+                </div>
+
+                <div id="savedFounders"></div>
+                <div id="foundersData"></div>
+
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" class="btn btn-outline-light prev-step" data-prev="3">← Назад</button>
+                    <button type="button" class="btn btn-warning next-step" data-next="5">Далее →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ШАГ 5: НАГРАДЫ -->
+        <div class="form-step" id="step5" style="display:none;">
+            <div class="panel-section">
+                <h5>🏅 Шаг 5: Награды</h5>
                 <p class="section-subtitle">Базовые награды созданы автоматически. Вы можете редактировать или удалять их.</p>
                 
                 <div id="awardPreview" class="award-preview-wrapper mb-3" style="display:none;">
@@ -192,7 +227,7 @@
                 <div id="awardsData"></div>
                 
                 <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-outline-light prev-step" data-prev="3">← Назад</button>
+                    <button type="button" class="btn btn-outline-light prev-step" data-prev="4">← Назад</button>
                     <button type="submit" class="btn btn-success btn-lg">🏆 Создать чемпионат</button>
                 </div>
             </div>
@@ -219,7 +254,6 @@ function selectFormat(stage, card) {
             <h5>📝 Шаг 2: Детали турнира</h5>
             <div class="row g-3">
                 <div class="col-12"><label class="form-label">Положение *</label><textarea name="regulations" class="form-control" rows="4" placeholder="Положение турнира..." required></textarea></div>
-                <div class="col-12"><label class="form-label">Информация об организаторах</label><textarea name="about_founders" class="form-control" rows="2" placeholder="Кто проводит турнир?"></textarea></div>
                 <div class="col-md-6"><label class="form-label">Дедлайн заявок *</label><input type="datetime-local" name="applications_deadline" id="deadlineInput" class="form-control" required></div>
             </div>`;
         setTimeout(() => {
@@ -232,7 +266,6 @@ function selectFormat(stage, card) {
             <h5>📝 Шаг 2: Детали турнира</h5>
             <div class="row g-3">
                 <div class="col-12"><label class="form-label">Положение (необязательно)</label><textarea name="regulations" class="form-control" rows="3" placeholder="Положение турнира..."></textarea></div>
-                <div class="col-12"><label class="form-label">Информация об организаторах</label><textarea name="about_founders" class="form-control" rows="2" placeholder="Кто проводит турнир?"></textarea></div>
                 <p class="section-subtitle">ℹ️ Для формата «${stageNames[stage]}» сбор заявок не требуется. Вы сможете добавить команды и расписание в управлении чемпионатом.</p>
             </div>`;
     }
@@ -330,11 +363,11 @@ function saveAward() {
     if (editIndex >= 0) { savedAwards[editIndex] = award; editIndex = -1; } else { savedAwards.push(award); }
     document.getElementById('awardName').value = ''; document.getElementById('awardDetail').value = ''; document.getElementById('awardYear').value = '';
     document.getElementById('awardPreview').style.display = 'none';
-    document.querySelector('.popup-block .btn-warning').textContent = 'Сохранить';
+    document.querySelector('#step5 .popup-block .btn-warning').textContent = 'Сохранить';
     renderSavedAwards();
 }
 
-function editAward(i) { const a = savedAwards[i]; document.getElementById('awardName').value = a.name; document.getElementById('awardDetail').value = a.detail; document.getElementById('awardIcon').value = a.icon; document.getElementById('awardColor').value = a.color; document.getElementById('awardYear').value = a.year; editIndex = i; document.querySelector('.popup-block .btn-warning').textContent = 'Обновить'; updatePreview(); }
+function editAward(i) { const a = savedAwards[i]; document.getElementById('awardName').value = a.name; document.getElementById('awardDetail').value = a.detail; document.getElementById('awardIcon').value = a.icon; document.getElementById('awardColor').value = a.color; document.getElementById('awardYear').value = a.year; editIndex = i; document.querySelector('#step5 .popup-block .btn-warning').textContent = 'Обновить'; updatePreview(); }
 function deleteAward(i) { if (confirm('Удалить?')) { savedAwards.splice(i, 1); renderSavedAwards(); } }
 
 function renderSavedAwards() {
@@ -353,7 +386,55 @@ function renderSavedAwards() {
         <input type="hidden" name="award_year_${i+1}" value="${a.year}">`).join('');
 }
 
+// Организаторы
+let savedFounders = [];
+let founderEditIndex = -1;
+
+function saveFounder() {
+    const firstName = document.getElementById('founderFirstName').value.trim();
+    const lastName = document.getElementById('founderLastName').value.trim();
+    if (!firstName && !lastName) { alert('Введите имя или фамилию организатора'); return; }
+    const founder = {firstName, lastName, bio: document.getElementById('founderBio').value.trim()};
+    if (founderEditIndex >= 0) { savedFounders[founderEditIndex] = founder; founderEditIndex = -1; }
+    else { savedFounders.push(founder); }
+    document.getElementById('founderFirstName').value = '';
+    document.getElementById('founderLastName').value = '';
+    document.getElementById('founderBio').value = '';
+    renderSavedFounders();
+}
+
+function editFounder(i) {
+    const f = savedFounders[i];
+    document.getElementById('founderFirstName').value = f.firstName;
+    document.getElementById('founderLastName').value = f.lastName;
+    document.getElementById('founderBio').value = f.bio;
+    founderEditIndex = i;
+}
+
+function deleteFounder(i) {
+    if (confirm('Удалить организатора?')) { savedFounders.splice(i, 1); renderSavedFounders(); }
+}
+
+function renderSavedFounders() {
+    const el = document.getElementById('savedFounders');
+    if (!el) return;
+    el.innerHTML = savedFounders.length === 0
+        ? '<p class="section-subtitle">Организаторы не добавлены. Вы можете пропустить этот шаг.</p>'
+        : savedFounders.map((f, i) => `
+            <div class="card p-3 mb-2" style="background:var(--card-bg);display:flex;flex-direction:row;align-items:center;gap:14px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:var(--accent,#1a73e8);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">👤</div>
+                <div style="flex:1;"><strong>${f.firstName} ${f.lastName}</strong>${f.bio ? '<div class="small" style="opacity:.7">' + f.bio + '</div>' : ''}</div>
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="editFounder(${i})">✏️</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteFounder(${i})">✕</button>
+            </div>`).join('');
+    document.getElementById('foundersData').innerHTML = savedFounders.map((f, i) => `
+        <input type="hidden" name="founder_first_name_${i+1}" value="${f.firstName}">
+        <input type="hidden" name="founder_last_name_${i+1}" value="${f.lastName}">
+        <input type="hidden" name="founder_bio_${i+1}" value="${f.bio}">`).join('');
+}
+
 // Запустить автосоздание при загрузке
 initDefaultAwards();
+renderSavedFounders();
 </script>
 {% endblock %}

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv\\\\Scripts\\\\python.exe manage.py migrate)",
+      "Bash(python manage.py check)",
+      "Bash(python manage.py check --deploy)",
+      "Bash(pip install *)",
+      "Bash(python manage.py migrate)",
+      "Bash(Get-ChildItem -Recurse -File -Name)",
+      "PowerShell(head *)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Артем Кучер\\\\OneDrive\\\\Рабочий стол\\\\media-volley\"; Get-ChildItem -Recurse | Where-Object {$_.PSIsContainer -eq $false} | Select-Object -ExpandProperty FullName | Select-Object -First 100)",
+      "Read(//mnt/c/Users/Артем Кучер/OneDrive/Рабочий стол/**)",
+      "Bash(timeout 5 ./venv/Scripts/python.exe manage.py runserver --noreload)",
+      "Bash(python manage.py shell -c ' *)",
+      "Bash(python manage.py *)",
+      "Bash(venv/Scripts/python manage.py migrate)",
+      "Bash(venv/Scripts/python manage.py check)"
+    ]
+  }
+}

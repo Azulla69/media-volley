@@ -17,3 +17,19 @@ class Notification(models.Model):
     
     def __str__(self):
         return f'{self.user}: {self.message[:50]}'
+
+
+class Follow(models.Model):
+    follower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='following', verbose_name='Подписчик')
+    followed_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='followers', verbose_name='Игрок')
+    followed_team = models.ForeignKey('teams.Team', on_delete=models.CASCADE, null=True, blank=True, related_name='followers', verbose_name='Команда')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+
+    def __str__(self):
+        if self.followed_user:
+            return f'{self.follower} → {self.followed_user}'
+        return f'{self.follower} → {self.followed_team}'

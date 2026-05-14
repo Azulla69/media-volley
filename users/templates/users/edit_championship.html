@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Редактировать — {{ championship.name }}{% endblock %}
+
+{% block content %}
+<div class="admin-panel-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>✏️ {{ championship.name }}</h2>
+            <small class="section-subtitle">Редактирование чемпионата</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'leagues:detail' championship.pk %}" class="btn btn-outline-info btn-sm">👁 Просмотр</a>
+            <a href="{% url 'leagues:championship_dashboard' championship.pk %}" class="btn btn-outline-warning btn-sm">⚙️ Управление</a>
+            <a href="{% url 'users:admin_panel' %}" class="btn btn-outline-light btn-sm">← Назад</a>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="editForm">
+        {% csrf_token %}
+
+        <!-- ВКЛАДКИ -->
+        <div class="champ-tabs" style="position:static; border-bottom:2px solid var(--border); margin-bottom:24px;">
+            <a href="#" class="champ-tab active" onclick="switchTab('main'); return false;">📋 Основное</a>
+            <a href="#" class="champ-tab" onclick="switchTab('details'); return false;">📝 Детали</a>
+            <a href="#" class="champ-tab" onclick="switchTab('design'); return false;">🎨 Оформление</a>
+            <a href="#" class="champ-tab" onclick="switchTab('settings'); return false;">⚙️ Настройки</a>
+        </div>
+
+        <!-- ШАГ: ОСНОВНОЕ -->
+        <div class="edit-panel panel-section" id="tab-main">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Название чемпионата *</label>
+                    <input type="text" name="name" class="form-control" value="{{ championship.name }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Короткое название</label>
+                    <input type="text" name="short_name" class="form-control" value="{{ championship.short_name }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Тип волейбола</label>
+                    <select name="league_type" class="form-select">
+                        <option value="CLASSIC" {% if championship.league_type == 'CLASSIC' %}selected{% endif %}>🏐 Классический</option>
+                        <option value="BEACH" {% if championship.league_type == 'BEACH' %}selected{% endif %}>🏖 Пляжный</option>
+                        <option value="PARK" {% if championship.league_type == 'PARK' %}selected{% endif %}>🌳 Парковый</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Этап</label>
+                    <select name="stage" class="form-select">
+                        <option value="applications" {% if championship.stage == 'applications' %}selected{% endif %}>📝 Сбор заявок</option>
+                        <option value="review" {% if championship.stage == 'review' %}selected{% endif %}>🔍 Приём заявок окончен</option>
+                        <option value="active" {% if championship.stage == 'active' %}selected{% endif %}>▶️ Идёт</option>
+                        <option value="finished" {% if championship.stage == 'finished' %}selected{% endif %}>🏁 Завершён</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Описание *</label>
+                    <textarea name="description" class="form-control" rows="6" required>{{ championship.description }}</textarea>
+                </div>
+            </div>
+            <div class="text-end mt-4">
+                <button type="submit" class="btn btn-warning px-4">💾 Сохранить изменения</button>
+            </div>
+        </div>
+
+        <!-- ШАГ: ДЕТАЛИ -->
+        <div class="edit-panel panel-section" id="tab-details" style="display:none;">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Дедлайн заявок</label>
+                    <input type="datetime-local" name="applications_deadline" class="form-control" value="{{ deadline_str }}">
+                    <small class="section-subtitle">Оставьте пустым, если дедлайна нет</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Положение</label>
+                    <textarea name="regulations" class="form-control" rows="7" placeholder="Правила и регламент турнира...">{{ championship.regulations }}</textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Сроки и место проведения</label>
+                    <textarea name="schedule_info" class="form-control" rows="3" placeholder="Когда и где проходят игры...">{{ championship.schedule_info }}</textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Об организаторах (общий текст)</label>
+                    <textarea name="about_founders" class="form-control" rows="3" placeholder="Краткое описание организаторов...">{{ championship.about_founders }}</textarea>
+                    <small class="section-subtitle">Карточки организаторов добавляются отдельно на странице чемпионата во вкладке «Организатор»</small>
+                </div>
+            </div>
+            <div class="text-end mt-4">
+                <button type="submit" class="btn btn-warning px-4">💾 Сохранить изменения</button>
+            </div>
+        </div>
+
+        <!-- ШАГ: ОФОРМЛЕНИЕ -->
+        <div class="edit-panel panel-section" id="tab-design" style="display:none;">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Основной цвет</label>
+                    <input type="color" name="primary_color" class="form-control form-control-color w-100" value="{{ championship.primary_color }}" id="primaryColor">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Вторичный цвет</label>
+                    <input type="color" name="secondary_color" class="form-control form-control-color w-100" value="{{ championship.secondary_color }}" id="secondaryColor">
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div>
+                        <label class="form-label">Быстрый выбор</label>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <span class="color-preset" style="background:#1a73e8" onclick="setColors('#1a73e8','#ffffff')"></span>
+                            <span class="color-preset" style="background:#e83a1a" onclick="setColors('#e83a1a','#ffffff')"></span>
+                            <span class="color-preset" style="background:#f4a100" onclick="setColors('#f4a100','#ffffff')"></span>
+                            <span class="color-preset" style="background:#009688" onclick="setColors('#009688','#ffffff')"></span>
+                            <span class="color-preset" style="background:#7c4dff" onclick="setColors('#7c4dff','#ffffff')"></span>
+                            <span class="color-preset" style="background:#2e7d32" onclick="setColors('#2e7d32','#ffffff')"></span>
+                            <span class="color-preset" style="background:#1565c0" onclick="setColors('#1565c0','#ffffff')"></span>
+                            <span class="color-preset" style="background:#6a1b9a" onclick="setColors('#6a1b9a','#ffffff')"></span>
+                            <span class="color-preset" style="background:#bf360c" onclick="setColors('#bf360c','#ffffff')"></span>
+                            <span class="color-preset" style="background:#00695c" onclick="setColors('#00695c','#ffffff')"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12"><hr style="border-color:var(--border);"></div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Логотип</label>
+                    {% if championship.logo %}
+                    <div class="mb-2 d-flex align-items-center gap-3">
+                        <img src="{{ championship.logo.url }}" style="height:64px;width:64px;object-fit:contain;border-radius:8px;background:var(--bg);" alt="Логотип">
+                        <small class="section-subtitle">Загрузите новый файл, чтобы заменить</small>
+                    </div>
+                    {% endif %}
+                    <input type="file" name="logo" class="form-control" accept="image/*">
+                </div>
+
+                <div class="col-12"><hr style="border-color:var(--border);"></div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Telegram</label>
+                    <input type="url" name="telegram_link" class="form-control" value="{{ championship.telegram_link }}" placeholder="https://t.me/...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">ВКонтакте</label>
+                    <input type="url" name="vk_link" class="form-control" value="{{ championship.vk_link }}" placeholder="https://vk.com/...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Макс</label>
+                    <input type="url" name="max_link" class="form-control" value="{{ championship.max_link }}" placeholder="Ссылка...">
+                </div>
+            </div>
+            <div class="text-end mt-4">
+                <button type="submit" class="btn btn-warning px-4">💾 Сохранить изменения</button>
+            </div>
+        </div>
+
+        <!-- ШАГ: НАСТРОЙКИ -->
+        <div class="edit-panel panel-section" id="tab-settings" style="display:none;">
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="card p-3" style="background:var(--bg);">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" name="is_published" id="isPublished" {% if championship.is_published %}checked{% endif %} style="width:2.5em;height:1.3em;">
+                            <label class="form-check-label ms-2" for="isPublished">
+                                <strong>Опубликован</strong>
+                                <div class="small section-subtitle">Чемпионат виден всем пользователям на сайте</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card p-3" style="background:var(--bg);">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" name="is_active" id="isActive" {% if championship.is_active %}checked{% endif %} style="width:2.5em;height:1.3em;">
+                            <label class="form-check-label ms-2" for="isActive">
+                                <strong>Активен</strong>
+                                <div class="small section-subtitle">Чемпионат принимает заявки и матчи</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 mt-2">
+                    <div class="card p-3 border border-danger" style="background:var(--bg);">
+                        <h6 class="text-danger mb-2">⚠️ Опасная зона</h6>
+                        <a href="{% url 'users:delete_championship' championship.pk %}"
+                           class="btn btn-outline-danger btn-sm"
+                           onclick="return confirm('Удалить чемпионат «{{ championship.name }}» навсегда? Это действие необратимо.')">
+                            🗑 Удалить чемпионат
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="text-end mt-4">
+                <button type="submit" class="btn btn-warning px-4">💾 Сохранить изменения</button>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+function switchTab(tab) {
+    document.querySelectorAll('.edit-panel').forEach(p => p.style.display = 'none');
+    document.getElementById('tab-' + tab).style.display = 'block';
+    document.querySelectorAll('.champ-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+function setColors(p, s) {
+    document.getElementById('primaryColor').value = p;
+    document.getElementById('secondaryColor').value = s;
+}
+</script>
+{% endblock %}

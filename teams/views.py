@@ -6,9 +6,19 @@ from django.db.models import Q
 from matches.models import Match
 from leagues.models import Championship
 from core.models import Notification
+from core.utils import build_calendar_data
 from .models import Team, TeamPlayer, TeamInvite
 from django.contrib.auth import get_user_model
 User = get_user_model()
+
+
+def team_catalog(request):
+    search = request.GET.get('q', '').strip()
+    teams = Team.objects.select_related('captain', 'founder').prefetch_related('players')
+    if search:
+        teams = teams.filter(name__icontains=search)
+    teams = teams.order_by('name')
+    return render(request, 'teams/catalog.html', {'teams': teams, 'search': search})
 
 
 @login_required
@@ -46,7 +56,8 @@ def create_team(request):
         messages.success(request, f'Команда «{team.name}» создана!')
         return redirect('teams:edit_team', team_id=team.id)
     return redirect('teams:my_teams')
-@login_required
+
+
 @login_required
 def edit_team(request, team_id):
     team = get_object_or_404(Team, pk=team_id)
@@ -174,53 +185,48 @@ def remove_player(request, team_id, player_id):
     
     messages.success(request, 'Игрок удалён из команды.')
     return redirect('teams:edit_team', team_id=team.id)
-@login_required
 def team_detail(request, team_id):
     team = get_object_or_404(Team, pk=team_id)
     main_players = team.players.filter(is_main=True)
     bench_players = team.players.filter(is_main=False)
-    
-    # Заглушки (заработают когда будут матчи)
-    from matches.models import Match
-    matches = Match.objects.none()  # Match.objects.filter(team_home=team) | Match.objects.filter(team_away=team)
-    total_games = 0
-    total_wins = 0
-    total_loses = 0
-    total_points = 0
-    
-    # Календарь
-    today = date.today()
-    import calendar as cal_module
-    cal = cal_module.monthcalendar(today.year, today.month)
-    match_dates = []  # заглушка
-    calendar_data = []
-    for week in cal:
-        wd = []
-        for day in week:
-            wd.append({'day': day if day else '', 'has_match': False})
-        calendar_data.append(wd)
-    
-    trophies = [
-        {'name': '🥇 1 место', 'champ': 'Ночная волейбольная лига', 'year': '2024'},
-        {'name': '🥈 2 место', 'champ': 'Кубок Факела', 'year': '2023'},
-    ]
-    
-    # В каких чемпионатах участвует команда (из матчей)
-    championship_ids = Match.objects.filter(
+
+    team_matches = Match.objects.filter(
         Q(team_home=team) | Q(team_away=team)
-    ).values_list('championship_id', flat=True).distinct()
+    ).select_related('championship').prefetch_related('sets').order_by('-date_time')
+
+    finished = [m for m in team_matches if m.status == 'FINISHED' and m.score_home is not None]
+    total_games = len(finished)
+    total_wins = sum(
+        1 for m in finished
+        if (m.team_home_id == team.id and m.score_home > m.score_away)
+        or (m.team_away_id == team.id and m.score_away > m.score_home)
+    )
+    total_loses = total_games - total_wins
+
+    today = date.today()
+    team_match_dates = [
+        m.date_time.date() for m in team_matches
+        if m.date_time.year == today.year and m.date_time.month == today.month
+    ]
+    calendar_data = build_calendar_data(today.year, today.month, team_match_dates)
+
+    championship_ids = team_matches.values_list('championship_id', flat=True).distinct()
     current_championships = Championship.objects.filter(id__in=championship_ids, is_active=True)
+
+    from core.models import Follow
+    is_following_team = request.user.is_authenticated and Follow.objects.filter(follower=request.user, followed_team=team).exists()
+    team_followers_count = team.followers.count()
     return render(request, 'teams/team_detail.html', {
         'team': team,
         'main_players': main_players,
         'current_championships': current_championships,
         'bench_players': bench_players,
-        'trophies': trophies,
         'total_games': total_games,
         'total_wins': total_wins,
         'total_loses': total_loses,
-        'total_points': total_points,
         'calendar_data': calendar_data,
         'today': today,
-        'matches': matches,
+        'matches': team_matches[:10],
+        'is_following_team': is_following_team,
+        'team_followers_count': team_followers_count,
     })

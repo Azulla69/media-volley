@@ -4,6 +4,7 @@ from . import views
 app_name = 'teams'
 
 urlpatterns = [
+    path('catalog/', views.team_catalog, name='catalog'),
     path('my-teams/', views.my_teams, name='my_teams'),
     path('<int:team_id>/', views.team_detail, name='team_detail'),
     path('remove-player/<int:team_id>/<int:player_id>/', views.remove_player, name='remove_player'),

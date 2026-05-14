@@ -76,11 +76,17 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Пол</label>
-                        <select name="gender" class="form-control">
-                            <option value="">Не указан</option>
-                            <option value="M" {% if user.gender == 'M' %}selected{% endif %}>Мужской</option>
-                            <option value="F" {% if user.gender == 'F' %}selected{% endif %}>Женский</option>
-                        </select>
+                        {% if user.gender %}
+                            <input type="text" class="form-control" value="{% if user.gender == 'M' %}Мужской{% else %}Женский{% endif %}" disabled>
+                            <input type="hidden" name="gender" value="{{ user.gender }}">
+                            <small class="section-subtitle">Пол нельзя изменить после регистрации</small>
+                        {% else %}
+                            <select name="gender" class="form-control">
+                                <option value="">Не указан</option>
+                                <option value="M">Мужской</option>
+                                <option value="F">Женский</option>
+                            </select>
+                        {% endif %}
                     </div>
                 </div>
                 
